@@ -285,4 +285,24 @@ class ServiciosControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert_equal 10, tipo_envios(:cer).reload.dias_entrega
   end
+
+  # C33-05 · La «Línea 2» del casillero en Miami, en el mismo renglón.
+  test "editar_dias guarda tambien la linea 2 del casillero, en mayusculas" do
+    cer = tipo_envios(:cer)
+
+    get servicios_url
+    assert_select "input[name=linea_2_casillero][value=?]", "REEMPAQUE AEREO"
+
+    patch dias_entrega_servicio_url(cer), params: { dias_entrega: "10", linea_2_casillero: "  reempaque   aereo cer " }
+
+    assert_equal "REEMPAQUE AEREO CER", cer.reload.linea_2_casillero
+  end
+
+  test "sin el campo, la linea 2 no se toca" do
+    cer = tipo_envios(:cer)
+
+    patch dias_entrega_servicio_url(cer), params: { dias_entrega: "9" }
+
+    assert_equal "REEMPAQUE AEREO", cer.reload.linea_2_casillero
+  end
 end

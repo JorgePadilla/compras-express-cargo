@@ -3592,7 +3592,8 @@ CREATE TABLE public.tipo_envios (
     modalidad character varying,
     sla character varying,
     max_paquetes_por_accion integer,
-    dias_entrega integer
+    dias_entrega integer,
+    linea_2_casillero character varying
 );
 
 
@@ -8895,6 +8896,7 @@ ALTER TABLE ONLY public.manifiesto_sucursales_entrega
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261025190000'),
 ('20261013200000'),
 ('20261013180000'),
 ('20261013150100'),

@@ -13372,6 +13372,24 @@ las direcciones de cada sucursal de recepción (`Sucursal.de_recepcion`).
 Hoy ningún correo sale al crear un cliente, ni desde el admin ni desde el
 portal.
 
+**▶ Las direcciones y «Mis Direcciones» (2026-10-25).** Jorge decidió armar el
+esqueleto sin esperar la plantilla, con el formato del sistema viejo (arriba,
+«7. Mis Direcciones»), y la página del portal como gemela de los correos. El
+link del menú apuntaba a `#`.
+- `DireccionesDelCasillero` da Miami una vez por servicio activo: nombre,
+  línea 1, **línea 2 del servicio**, ciudad, estado, código postal, teléfono
+  y país. La dirección sale del Warehouse Receipt
+  (`config.x.warehouse_receipt`).
+- La línea 2 es `tipo_envios.linea_2_casillero`: REEMPAQUE AEREO, AEREO CKA,
+  EXPRESS, REEMPAQUE MARITIMO y MARITIMO CKM. Se edita en /servicios, en el
+  renglón de los días de entrega.
+- Otra bodega de recepción (México) aparece cuando tenga `direccion` cargada
+  en /sucursales.
+- `/cuenta/direcciones` muestra un bloque por servicio, con botón de copiar.
+- ❓ El nombre va como `CÓDIGO NOMBRE COMPLETO`. El sistema viejo decía
+  `[CÓDIGO] [CÓDIGO_CLIENTE] [NOMBRE_COMPLETO]`, con un código adelante que no
+  se sabe qué era. Se confirma con la plantilla de Yusef.
+
 ### C33-06 · Entrar con el código: que no importen las mayúsculas (14:09, min 0–6)
 
 Probando el portal con la cuenta de prueba de Nery (código `C1`):
@@ -13523,7 +13541,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ❌ Falta — chico; depende de `RP-109` |
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
 | `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
-| `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ❌ Falta — plantillas de Yusef |
+| `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | 🟡 Las direcciones y «Mis Direcciones» en el portal, hechas; faltan los tres correos |
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
 | `C33-08` | App del cliente | 📄 Visión, sin fecha |
