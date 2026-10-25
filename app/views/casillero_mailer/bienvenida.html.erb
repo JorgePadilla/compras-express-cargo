@@ -1,0 +1,11 @@
+<p>Hola <%= @cliente.nombre_completo %>,</p>
+
+<p>Bienvenido a Compras Express Cargo. Su número de casillero es <strong><%= @cliente.codigo %></strong>.</p>
+
+<p>Cuando compre en línea, use esta dirección de envío tal cual, con la <strong>Línea 2</strong> del servicio que quiere:</p>
+
+<%= render "casillero_mailer/direcciones", direcciones: @direcciones %>
+
+<p>También las encuentra en «Mis Direcciones», en su cuenta: <%= link_to cuenta_direcciones_url, cuenta_direcciones_url %></p>
+
+<p>Compras Express Cargo</p>

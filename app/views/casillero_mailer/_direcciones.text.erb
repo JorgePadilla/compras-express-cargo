@@ -1,0 +1,5 @@
+<% direcciones.bloques.each do |bloque| %>
+<%= bloque.titulo %><%= " (#{bloque.descripcion})" if bloque.descripcion.present? %>
+<%= bloque.texto %>
+
+<% end %>

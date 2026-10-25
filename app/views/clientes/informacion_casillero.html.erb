@@ -1,0 +1,31 @@
+<%# C33-05 · La información del casillero a alguien que todavía no es cliente.
+    Yusef, 2026-10-24: *"a veces no quiere escribir… solo manda la
+    información"*. Es de SAC. %>
+<%= render PageHeaderComponent.new(title: "Información de casillero", subtitle: "Para alguien que todavía no es cliente") do |header|
+  header.with_back do
+    render ButtonComponent.new(variant: :ghost, href: clientes_path, icon: "arrow-left", shortcut: "F2") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="max-w-xl bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+  <p class="mb-5 text-sm text-gray-700 dark:text-gray-200">
+    Le llegan las direcciones del casillero en Miami, una por servicio, y el link para abrir su casillero.
+    A un cliente que ya existe se le manda desde su ficha, con su código y su nombre.
+  </p>
+
+  <%= form_with url: informacion_casillero_clientes_path, method: :post, class: "space-y-5" do %>
+    <div>
+      <%= label_tag :correo, "Correo", class: "cec-rotulo" %>
+      <%= email_field_tag :correo, @correo, required: true, autocomplete: "off", autofocus: true, class: "cec-campo",
+            data: { mensaje_obligatorio: "Escribí el correo." } %>
+    </div>
+    <div>
+      <%= label_tag :nombre, "Nombre (opcional)", class: "cec-rotulo" %>
+      <%= text_field_tag :nombre, @nombre, autocomplete: "off", class: "cec-campo", "aria-describedby": "nombre-ayuda" %>
+      <p id="nombre-ayuda" class="cec-ayuda">Va en el saludo del correo.</p>
+    </div>
+    <%= render(ButtonComponent.new(variant: :primary, type: :submit, icon: "paper-airplane")) { "Enviar información" } %>
+  <% end %>
+</div>

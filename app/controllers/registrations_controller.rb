@@ -33,6 +33,9 @@ class RegistrationsController < ApplicationController
     @cliente.activo = true
 
     if @cliente.save
+      # C33-05 · La bienvenida con sus direcciones, igual que cuando lo crea la
+      # oficina en `/clientes`.
+      CasilleroMailer.bienvenida(@cliente).deliver_later if @cliente.email.present?
       start_new_cliente_session_for(@cliente)
       redirect_to cuenta_root_path, notice: "Bienvenido a Compras Express Cargo! Tu cuenta ha sido creada exitosamente."
     else
