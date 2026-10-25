@@ -12495,7 +12495,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `RP-77` | **Corregir después de F9** (`C30-18`): ¿se puede pasar a F8 una pre-factura ya notificada? Si el aviso todavía está en cola, ¿se cancela o se manda corregido, como hace el sistema viejo?. ✅ **Contestada el 2026-10-11** (`C30-23`): si el aviso no salió, sale con el último dato; si ya salió, se manda otra vez **como «Actualización»**. Cambia lo de `PR-P.7` (volver a consolidar solo antes del aviso) |
 | `RP-78` | **¿F9 pone los paquetes «disponibles» al apretarlo, o a la hora de la fecha de trabajo?** PR-D1 §A (*"mientras espera la fecha programada, el paquete queda en aduana"*) y `A7-16` dicen a la hora; `C30-15` (*"cuando le das F9"*) se puede leer al instante. Se construye a la hora, para que la web y el correo digan lo mismo (`A7-13`). ✅ **Contestada el 2026-10-11** (`C30-23`): *"así está actualmente"* — a la hora programada, no al F9. Pide que web, correo, WhatsApp, SMS y push salgan **lo más juntos posible**: va con `RP-80` |
 | `RP-79` | **La línea de la factura es el volumen** (cierra `RP-41`): un escalón y un mínimo por volumen, no por caja. ¿La factura muestra también cada caja en L. 0.00, o solo los volúmenes? |
-| `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales?. ▶ **2026-10-11**: cuando lleguen WhatsApp/SMS/push, que salgan **en el mismo momento** que el correo y el cambio en la web (`RP-78`) |
+| `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales?. ▶ **2026-10-11**: cuando lleguen WhatsApp/SMS/push, que salgan **en el mismo momento** que el correo y el cambio en la web (`RP-78`). ▶ **2026-10-24** (`C33-07`): hoy mandan *"correo más WhatsApp o SMS"*; el WhatsApp del sistema viejo lo hizo Roger con **Twilio** y la cuenta es de Yusef; son cuatro canales con el push, y el paquete **retenido** en Miami lo quiere *"hasta por WhatsApp"* |
 | `RP-81` | **La fecha por defecto**: ¿mañana 7:30 (*"la ponemos mañana"*, `C26-10`) u hoy? ¿Sábado y domingo? ¿Una hora por hoja (aéreo una, marítimo otra)? |
 | `RP-82` | **La etiqueta de entrega** (`C30-19`): ¿una por pre-factura o una por volumen («1 de 3»)? «El volumen», ¿son pies³, VLBS, o cuántos volúmenes? ¿Lleva fecha **y hora** de disponible?. ▶ **2026-10-12** (`C31-17`): son **N** — F9 pregunta cuántas, «1 de N», con QR propio por bolsa (`PR-C31.9b` #536) |
 | `RP-83` | **El auditor edita paquetes y volúmenes** (`C30-17`): cambiar el peso cambia el cobro, y desde la Fase 13 eso pide PIN de supervisor. ¿Con PIN, o vuelve a Medición?. ⏳ **Yusef la confirma después de reunirse con su equipo** (2026-10-11): *"creería que él puede cambiar toda esa información… allí probable tocará mandar a remedir y pesar"* |
@@ -13202,3 +13202,336 @@ queda *a confirmar*:
 |---|---|
 | `RP-104` | ~~**El historial de manifiestos** (`C32-01`): ¿qué estados van en los cheques? ¿Por defecto qué se ve marcado? ¿Las fechas de la lista? ¿Reemplaza a `/manifiestos` o es aparte?~~ **Cerrada** (Jorge, 2026-10-15): pantalla aparte, todos los estados marcados al entrar con los últimos 3 meses; «empezó a prefacturar» va como columna. Construido en `PR-C32.5` |
 | `RP-105` | ~~**La sucursal en la 4×6 de entrega** (`C32-02`): *"como era San Pedro no debía haber dicho nada"* — ¿en San Pedro la sucursal no se imprime, o se imprime igual de grande en todas?~~ **Cerrada** (Jorge, 2026-10-15): se imprime **siempre**, grandísima, también en San Pedro |
+
+## Conversación 33 (2026-10-24) — las notificaciones: qué correo sale, cuándo y a quién; la sucursal que no es San Pedro avisa al recibir; y el casillero por correo
+
+Tres grabaciones del sábado en la oficina, en persona. Casi todo es sobre una
+planilla que Yusef armó en Excel con **cada correo que tiene que mandar el
+sistema**: cuándo, a quién, con copia a quién, y por qué canal (correo, push,
+SMS, WhatsApp). Jorge la pegó tal cual el 2026-10-25 y va abajo, en `C33-01`.
+
+| Audio | Duración | De qué |
+|---|---|---|
+| 14:09 | 20 min | Los canales (correo, WhatsApp o SMS, push); el cliente sin correo entra con su código, y el código no debería distinguir mayúsculas; la app del cliente. De min 8 en adelante es conversación personal |
+| 16:24 | 20 min | La planilla, fila por fila: la copia a SAC, el resumen de las 6 pm y el «disponible» de una sucursal que no es San Pedro |
+| 16:45 | 63 min | La sucursal externa otra vez; la nota «dejar en San Pedro» que nadie leyó; los correos del casillero; la doble autenticación; WhatsApp con Twilio; el CRM con IA |
+
+> ⚠️ **Sobre el transcript.** Plaud no generó resumen ni transcripción
+> (`get_note` y `get_transcript` vuelven vacíos), así que va `whisper small`
+> en 19 pedazos de 6 minutos. El «min» es el de la grabación que se nombra.
+> Hay tramos largos de conversación personal que no se documentan: viajes,
+> teléfonos, la pizza, el comedor nuevo y la configuración de la app del CRM
+> en la computadora de Yusef (16:45, min 54–66). Lo que no se entiende se
+> marca con ❓.
+
+### C33-01 · La planilla de las notificaciones
+
+Yusef, al arrancar (16:45, min 30–36): *"recordate que podemos más adelante
+agregar más; **primero los básicos**, hasta donde tenemos ahorita"*. La
+planilla, como la pegó Jorge, con lo que dijo de cada fila y lo que hay hoy
+en el sistema:
+
+| # | Cuándo | Qué | A quién | Copia | Hoy en el sistema |
+|---|---|---|---|---|---|
+| 1 | Inmediatamente | Al **crear una pre-alerta** | Al cliente | `sac@comprasexpresshn.com` | 🟡 `PreAlertaMailer#confirmacion` sale al crearla o moverla desde el portal, **sin copia** (`C33-02`) |
+| 2 | Inmediatamente | Al **recibir el paquete** en la sucursal, en Etiquetar (Miami, México, China, Panamá) | Al cliente | — | 🟡 `PreAlertaMailer#paquete_recibido` sale **solo si tiene pre-alerta o nota de política** (decisión de Jorge del 2026-08-26, `NotificaRecibido`). La planilla no pone condición: ❓ `RP-106` |
+| 3 | Resumen al final del día, tipo 6 pm | Todos los paquetes **enviados** ese día, con su información: envío, trackings, contenidos y la nueva fecha probable de entrega | Al cliente | — | ❌ No existe (`C33-03`) |
+| 4 | Inmediatamente, o programado según la **fecha y hora de trabajo** de la pre-factura | **Disponible** en la sucursal asignada para entrega. Si va a una sucursal que es el **último destino**, que no avise hasta confirmar el contenido de la pre-factura allá | Al cliente | — | 🟡 Lo programado existe (`HacerDisponibles`, `PR-P.2`). La sucursal externa **no**: hoy el F9 avisa «disponible» aunque la carga siga en San Pedro (`C33-04`) |
+| 5 | Inmediatamente | **Crear casillero nuevo** | (al cliente) | — | ❌ No hay correo de bienvenida (`C33-05`) |
+| 6 | Inmediatamente | **Información general de casillero**, cuando se le quiere mandar a alguien que **todavía no es cliente**. Área de SAC | A un correo específico | — | ❌ (`C33-05`) |
+| 7 | Inmediatamente | **Información actualizada de casillero** a un cliente que ya existe. Va en el perfil del cliente | Al cliente | — | ❌ (`C33-05`) |
+
+Las columnas de canal (`CORREO · PUSH · SMS · WHATSAPP`) vinieron vacías en
+la planilla. Lo que se dijo de canales va en `C33-07`. Y de los correos de
+**cortes** con copia a contabilidad, Yusef mismo lo dejó para después: *"no
+ocupamos llegar hasta ahí"* (16:45, min 30–36).
+
+El contenido de cada correo **no está definido**. Jorge: *"esto puede ir
+haciendo el esqueleto y todo eso, pero al final voy a ocupar…"*; Yusef: *"te
+puedo dar una plantilla a mi gusto"* (16:45, min 42–48). Las plantillas que
+existen se reusan, y las nuevas esperan ese texto.
+
+### C33-02 · La pre-alerta, con copia a SAC (16:24, min 0–6)
+
+> "Crear la prealerta, que te mande al cliente, aquí en el cliente, y
+>  nosotros lo supervisamos… y una copia." · "Supervisamos las prealertas en
+>  teoría. El muchacho de Tegu, pero no lo supervisa bien."
+
+Más adelante quiere que alguien (o la IA de `C33-12`, *"la guía"*) revise esos
+correos y le avise al cliente si puso un número de orden equivocado: *"eso
+es cosas para futuro… pero **la copia ahorita sí** la va a querer"*.
+
+¿La casilla existe? *"Y si está activo, mejor. O si no, creamos el correo
+ahorita."* Los correos *"se llenan"* y los van borrando a mano. ❓ `RP-109`:
+¿`sac@comprasexpresshn.com` está activa y es la que va?
+
+Lo que falta: `PreAlertaMailer#confirmacion` con `cc:` a SAC. Hoy sale desde
+el portal y no cuando la crea el personal. Tiene que salir en los dos casos, o
+se aclara cuál.
+
+### C33-03 · El resumen de las 6 de la tarde: lo que salió hoy, un correo por cliente (16:24, min 0–6)
+
+Jorge preguntó qué es «enviado», y Yusef lo explicó con el estado:
+
+> "Cuando los escaneamos o les hacemos el manifiesto y salen enviados…
+>  **cambian de estatus de recibido Miami** o recibido lo que sea, **a
+>  enviados**. Hace un resumen del cliente."
+
+Y por qué uno solo:
+
+> "Jorge recibió tres paquetes hoy, o ayer y hoy, pero salió hasta hoy todo.
+>  Te hace un resumen… tracking tal, contenido tal… **con el tipo de servicio**…
+>  Imaginate que recibiste tres paquetes aéreos, un express y dos marítimos y
+>  todos salieron el mismo día: se vuelve una locura." · "Que agarre todos los
+>  tracking, **un solo correo**… en una sola plantilla." · "Por cliente, al
+>  cliente. No creo que valga la pena hacernos copia."
+
+La hora: *"yo puse cinco, pero la verdad que cinco es muy temprano, yo diría
+que lo ponemos a las seis"*. La nueva fecha probable de entrega: *"vamos a
+tratar de ponerla el mismo día"*, o sea la que ya calcula `C31-11`
+(`fecha_posible_entrega`), puesta al día cuando sale.
+
+Lo que falta:
+- Un job diario a las 18:00 (Honduras), con la cola que ya existe.
+- Toma los paquetes que **pasaron a `enviado`** ese día y los agrupa por
+  cliente: tracking, contenido, tipo de envío y fecha probable.
+- El que ya avisó no se repite: un sello por paquete, como
+  `llegada_notificada_at`.
+- Sin correo, no se manda y queda dicho, igual que en `HacerDisponibles`.
+
+### C33-04 · La sucursal que no es San Pedro: no avisar con el F9, avisar cuando llegue completo allá
+
+El hueco más concreto de la reunión. Ocupó todo 16:24 min 6–18 y volvió en
+16:45 min 0–6 y 18–30.
+
+Yusef, sobre lo que pasa hoy con la carga de Tegucigalpa:
+
+> "Todas las que son de sucursal, Tegus y Galpa, se van con F9 con una fecha
+>  programada aproximada." · "Yo creo que le presionan F8 para que el sistema
+>  no notifique." · "Que yo diga que va a llegar mañana **no quiere decir que
+>  va a llegar mañana**."
+
+Lo que pide:
+
+> "Aunque tenga fecha y hora, **no lo notifique hasta que ya está disponible
+>  allá**. Se le dio recepción allá." (16:24, min 12–18) · "Hasta que escanea
+>  ha recibido… **completo**. Porque a veces la prefactura lleva tres, cuatro,
+>  cinco, siete etiquetas… Imaginate que se quedó uno aquí." (16:45, min 0–6)
+
+Qué se escanea en destino: *"solo las **etiquetas grandes**, no las más
+pequeñitas, porque sería demasiado trabajo"* (16:45, min 24–30). Son las 4×6
+de entrega (`C32-02`). Y en la planilla lo dejó escrito como *"en el caso de
+que va a una sucursal **último destino**, que notifique hasta confirmar el
+contenido de la pre factura"*. Lo de «último destino» lo explicó con un
+ejemplo: Choluteca pasaría por San Pedro y Tegucigalpa antes de llegar.
+
+**Lo que hay hoy (verificado en el código, 2026-10-25):**
+- `HacerDisponibles#hacer_disponible!` pasa **todas** las cajas de la
+  pre-factura a `disponible_entrega` y manda `PreFacturaMailer.disponible`,
+  sin mirar la sucursal de retiro.
+- El manifiesto interno toma la carga **desde** `disponible_entrega`
+  (`Manifiesto`, comentario de la l. 490).
+- Al recibirlo en destino, `NotificarLlegadaASucursal` avisa otra vez.
+- O sea: el cliente de Tegucigalpa recibe «disponible» cuando la carga sigue
+  en San Pedro, y después un segundo aviso cuando llega. Es justo lo que
+  Yusef no quiere, y por eso el personal aprieta F8.
+
+**Lo que falta:**
+- Para una pre-factura cuyo cliente retira en una sucursal **que no es la que
+  pre-factura**, el F9 programado no avisa ni dice «disponible».
+- El aviso lo da la recepción del manifiesto interno en destino, que ya
+  existe.
+- Hay que ver si espera a que estén **todas** las etiquetas grandes de esa
+  pre-factura, o si avisa por caja como hoy.
+- Yusef quiere sentarse con el personal antes de cerrarlo: *"¿Cómo quieren
+  ellos? ¿Cómo creen que sean los mejores? ¿Cómo creemos nosotros que sean
+  los mejores? Son tres puntos"* (16:24, min 12–18). ❓ `RP-108`.
+
+Una idea que tiró de paso, sin cerrarla: *"cuando mire que va para la
+sucursal de Tegucigalpa, que le tire un modal y le diga: va para la sucursal
+de Tegucigalpa, lo agregó al manifiesto de Tegucigalpa, y lo tienen que
+confirmar cuando lo están empacando"* (16:24, min 6–12).
+
+### C33-05 · Los correos del casillero (16:45, min 24–36)
+
+Tres correos, todos inmediatos:
+
+- **Casillero nuevo**: al crearlo, la bienvenida con sus direcciones.
+- **Información general de casillero**, a un correo cualquiera:
+  > "Cuando queramos enviarle información a un correo de una persona **no
+  >  cliente aún**." · "Es como que vos me digas: mandales la dirección de
+  >  casillero a alguien… a veces no quiere escribir… solo manda la
+  >  información." Va en el área de SAC.
+- **Información actualizada de casillero** a un cliente que ya existe:
+  > "Mandarle a Jorge toda la información actualizada de los casilleros… es el
+  >  mismo de casillero nuevo con todos los nuevos que hemos cambiado." ·
+  > "**Es un botón** en el perfil de cliente."
+
+El de casillero nuevo y el de información actualizada son la misma plantilla:
+las direcciones de cada sucursal de recepción (`Sucursal.de_recepcion`).
+Hoy ningún correo sale al crear un cliente, ni desde el admin ni desde el
+portal.
+
+### C33-06 · Entrar con el código: que no importen las mayúsculas (14:09, min 0–6)
+
+Probando el portal con la cuenta de prueba de Nery (código `C1`):
+
+> "Pues no me vas a entrar… ¿Será por la mayúscula? … Ah, era mayúscula." ·
+> "Si le eliminas eso sería bueno, lo de la mayúscula… **porque la gente no
+>  entiende**."
+
+Verificado: `Cliente.autenticar` busca `codigo: valor` tal cual lo escriben,
+y el correo sí lo pasa a minúsculas. Con `c1` no entra. Lo mismo en
+`Cliente.para_recuperar` (olvidé mi contraseña). Arreglo chico: comparar el
+código sin distinguir mayúsculas, en los dos.
+
+De paso, el porqué de entrar con código: *"hay clientes que **ni tienen
+correo**, y ese es donde nosotros tenemos el gap… que puedan accesar ya sea
+con correo o con número de teléfono o número de casillero"*. Con código ya se
+puede desde agosto (Yusef, 2026-08-19: *"es que yo no tengo correo"*). Con **teléfono**, no: queda anotado, no se pidió de nuevo.
+
+### C33-07 · Los canales: correo siempre, WhatsApp o SMS, y push
+
+> "Actualmente mandamos **correo más WhatsApp o SMS**." (14:09, min 0–6) ·
+> "Entonces aquí van a quedar… cuatro, porque dijimos que iba a haber el
+>  push."
+
+Jorge propuso ir haciendo primero la conexión, y el «qué se manda» encima:
+*"cuando ya tenés cómo conectar y cómo mandarlo, esa otra parte es una capa
+arriba"*. Yusef estuvo de acuerdo.
+
+**WhatsApp** (16:45, min 36–42):
+- Lo armó Roger en el sistema viejo con **Twilio**. Yusef tiene la cuenta y
+  es administrador: *"ya veo la cuenta de Twilio"*.
+- Los clientes tuvieron que **verificarse** (mandar un mensaje y autorizar).
+  Jorge contó que con Meta directo se les hizo muy difícil y terminaron
+  usando Twilio.
+- Uno que Yusef quiere **hasta por WhatsApp**: cuando Miami **retiene** un
+  paquete. *"Ese yo lo quiero que lo notifique hasta por WhatsApp, si es
+  posible."* La plantilla de recibido cambia cuando el paquete viene
+  retenido (la bandera `retener_miami`, que en la etiqueta dice `RET`,
+  `C16-07`).
+
+Sigue abierta `RP-80` (los canales, el proveedor, y si WhatsApp reemplaza al
+SMS). Esto le suma que el proveedor sería Twilio, con la cuenta que ya existe.
+
+### C33-08 · La app del cliente, para el push (14:09, min 0–6)
+
+Yusef dijo qué quiere de la app. Jorge le preguntó el propósito, *"aparte de
+recibir notificaciones"*:
+
+> "Que el cliente pueda crear pre-alerta… darle seguimiento a sus paquetes…
+>  una fecha aproximada de cuándo le viene, y después la fecha cuando le
+>  vamos a entregar… si el paquete ya se le entregó, **que vea la firma** de
+>  la persona que lo recibió: *recibido por*, y sale el garabato de Gabriel."
+> · "Todo lo que vos haces allá, pero a touch." · "Más adelante, pagar tu
+>  prefactura… que te lo envíen a tu dirección."
+
+Para los pagos mencionó **Compra Click** y la **transferencia**: el cliente
+sube el comprobante y alguien la confirma a mano (14:09, min 6–12). La firma
+va con el POD que sigue pendiente (`A7-33`).
+
+Jorge: *"ir haciendo como un cascarón del app, un login"*. **No es pedido
+para ya**: es la visión. Lo primero sería el push.
+
+### C33-09 · La nota «dejar en San Pedro» que nadie leyó (16:45, min 0–6)
+
+Un caso real: una pre-factura que en el contenido decía, en letra grande,
+*"dejar en San Pedro Sula"*, y la mandaron a Tegucigalpa. El que escaneaba
+no la vio.
+
+> "Ahora, con el sistema, en la buena práctica **debería alertarte o no
+>  dejarte**." · "Esas son las notas especiales que quiero poner en la
+>  prefactura de un paquete: que ese paquete tiene una tarea de que se tiene
+>  que quedar en San Pedro. **Ya entendí de dónde van las tareas.**"
+
+Es una tarea que **bloquea el avance** sobre la caja
+(`Paquete#no_advance_with_open_tareas`). ❓ Falta verificar que el escaneo del
+manifiesto interno la frene igual que las otras transiciones. Ya existe el
+aviso rojo de «se entregará en» cuando el cliente no retira en la sucursal de
+siempre (`C29-03`), pero acá el cliente es de Tegucigalpa y **ese paquete**
+se queda en San Pedro: el aviso dice lo contrario de la nota.
+
+El caso de fondo es una revendedora con **dos casilleros** al mismo nombre y
+distinto correo, uno por sucursal: *"le voy a hacer otro casillero con su
+mismo nombre… donde voy a decir Tegucigalpa, te lo hice a San Pedro"*.
+
+### C33-10 · La entrega equivocada por el número de casillero (14:09, min 6–12)
+
+Un paquete se le entregó a otra clienta, que lo pagó, y ahora hay que
+mandarlo a Choloma o Chamelecón (❓ no se entiende cuál):
+
+> "Se equivocan con el dedo… el casillero sale de 4 y de 5 dígitos, y no se
+>  fijan en los 5, sino que son los últimos 4."
+
+El cobro estuvo bien. El error fue al entregar, y *"no iba a escanear"*.
+Es el caso para el que está la entrega por escaneo. Se anota como caso real,
+sin pedido nuevo.
+
+### C33-11 · Seguridad de las cuentas (16:45, min 30–36 y 60–66)
+
+Jorge preguntó si quería una autenticación más segura, y Yusef habló de *"un
+two-factor de Google por lo menos"*. Después se mezcla:
+
+> "Bueno, opcional, sí… no, eso es opcional… bueno, no, esto es obligatorio…
+>  obligatorio va a estar difícil… si hay algún hackeo… la tarjeta de crédito
+>  más adelante."
+
+❓ `RP-107`: no queda claro si es para el **personal** o para los
+**clientes**, ni si es opcional u obligatoria.
+
+Y el bloqueo por intentos: *"¿se va a querer que se bloquee una cuenta si
+alguien prueba muchas veces?"* · *"Sí, tal vez… **después de diez veces**"*.
+Hoy `SessionsController` limita a **10 intentos en 3 minutos** por origen,
+pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
+
+### C33-12 · Lo que viene, dicho de pasada (contexto, sin pedido)
+
+- **Un departamento de servicio al cliente remoto** (14:09, min 6–12): *"queremos
+  crear un departamento donde va a haber alguien atendiendo clientes,
+  remoto"*. Lo van a apoyar los de bodega. Es parte de un **CRM** que está
+  armando otra persona *"para que el otro año se note la diferencia"*.
+- **El CRM y la IA** (16:45, min 24–30 y 42–54):
+  - Junta correos, Facebook, Instagram, TikTok y WhatsApp (sin la API de
+    WhatsApp: se conecta como WhatsApp Web, por QR).
+  - Está entrenando un modelo con las conversaciones de SAC. Yusef: *"ese
+    modelo después nos atienda, y se va a conectar a tu sistema, y va a crear
+    la prealerta, va a crear casillero, va a hacer todo"*.
+  - Para el sistema, eso sería una **API** que todavía no existe. Cuando
+    llegue, se diseña.
+- **Tegucigalpa hoy solo recibe y entrega** (16:45, min 24–30): la carga se
+  prepara en San Pedro. Yusef piensa en algún momento mandarla directo, pero
+  pediría más personal allá (supervisor de pre-factura, medición). *"No estoy
+  seguro de que eso sea lo correcto."*
+- **Adivinar los días pesados** con las APIs de UPS y FedEx para las
+  pre-alertas (16:45, min 42–48). Idea de Jorge, para más adelante.
+- **Roles** (16:45, min 12–18): sobre el sistema viejo, *"los roles están mal
+  hechos… me gustaría poder quitarle y poner cosas a los roles"*. Eso ya está
+  en `/roles`: permisos por puesto y varios roles por persona.
+- **El viernes sale más barato** (16:45, min 36–42): la carga que Miami no
+  despacha el viernes se va en un envío más caro, y con 100 libras son unos
+  $200. Es operativo, no del sistema.
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C33-01` | La planilla de notificaciones, como lista de trabajo | 📄 Las filas abajo; el texto de cada correo lo da Yusef |
+| `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ❌ Falta — chico; depende de `RP-109` |
+| `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
+| `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
+| `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ❌ Falta — plantillas de Yusef |
+| `C33-06` | Entrar con el código sin distinguir mayúsculas | ❌ Falta — chico |
+| `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
+| `C33-08` | App del cliente | 📄 Visión, sin fecha |
+| `C33-09` | Tarea «se queda en San Pedro» que frene el manifiesto interno | ❓ Verificar |
+| `C33-11` | Doble autenticación | ❓ `RP-107` |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-106` | **El correo de «recibido»** (`C33-01` fila 2): la planilla dice *al recibir el paquete, al cliente*, sin condición; desde el 2026-08-26 sale solo si tiene pre-alerta o nota de política. ¿Pasa a salir con **todo** paquete recibido? |
+| `RP-107` | **La doble autenticación** (`C33-11`): ¿para el personal, para los clientes o para los dos? ¿Obligatoria u opcional? |
+| `RP-108` | **La sucursal externa** (`C33-04`): ¿el aviso espera a que lleguen **todas** las etiquetas grandes de la pre-factura, o sale por caja como hoy? ¿Qué fecha de trabajo se le pone en San Pedro? ¿El modal de «va para Tegucigalpa» al empacar? Yusef lo va a ver con el personal |
+| `RP-109` | **La casilla de SAC** (`C33-02`): ¿`sac@comprasexpresshn.com` está activa y es la que va en copia? |
