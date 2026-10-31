@@ -259,9 +259,12 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
 
   def preparar_la_hoja(hora: "07:30", fecha: nil)
     visit hoja_de_preparacion_path
+    # PR-P.12 · Tildar el servicio trae sus manifiestos, y tildar el
+    # manifiesto guarda la hoja: se espera a que la página vuelva con él
+    # marcado (el atributo `checked` lo pone el servidor, no el clic).
     find("label", text: @cer.nombre, exact_text: true).click
-    click_on "Ver manifiestos"
-    find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).check
+    find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all, wait: 5).check
+    assert_selector "#hoja_manifiesto_#{@manifiesto.id}[checked]", visible: :all, wait: 5
     page.execute_script("document.querySelector('#hoja_hora')._flatpickr.setDate('#{hora}', true)")
     page.execute_script("document.querySelector('#hoja_fecha')._flatpickr.setDate('#{fecha}', true)") if fecha
     # C31-16 · Un solo botón: guarda la hoja y entra a auditar.

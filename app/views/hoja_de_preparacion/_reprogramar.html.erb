@@ -5,12 +5,17 @@
     cada una tenía. %>
 <% manifiesto = local_assigns.fetch(:manifiesto, nil) %>
 <% sufijo = manifiesto ? manifiesto.id : "todas" %>
+<%# PR-P.12 · Arranca en la hora a la que están programadas, no siempre en
+    las 7:30: cambiar la hora empieza por ver cuál tienen. %>
+<% programadas = HojaDePreparacion.pre_facturas_editables.where.not(notificar_at: nil) %>
+<% programadas = programadas.where(manifiesto_id: manifiesto.id) if manifiesto %>
+<% hora_actual = programadas.minimum(:notificar_at)&.strftime("%H:%M") || HojaDePreparacion.hora_por_defecto %>
 <%= form_with url: reprogramar_hoja_de_preparacion_path, method: :patch,
               class: "mt-3 flex flex-wrap items-end gap-3", data: { reprogramar: sufijo } do %>
   <%= hidden_field_tag :manifiesto_id, manifiesto&.id, id: nil %>
   <div>
     <%= label_tag "reprogramar_hora_#{sufijo}", "Hora", class: "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1" %>
-    <%= text_field_tag :hora, HojaDePreparacion.hora_por_defecto, id: "reprogramar_hora_#{sufijo}",
+    <%= text_field_tag :hora, hora_actual, id: "reprogramar_hora_#{sufijo}",
           data: { controller: "flatpickr", flatpickr_solo_hora_value: true }, autocomplete: "off",
           class: "block w-28 min-h-11 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
   </div>

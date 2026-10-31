@@ -150,7 +150,9 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
   end
 
-  test "en «editar» no hay auditoría que empezar: el botón solo guarda" do
+  # PR-P.12 · Y tampoco «Guardar la hoja»: el modo se guarda al elegirlo, y en
+  # «editar» lo que se corrige son las tarjetas. Ni los servicios de «nuevas».
+  test "en «editar» no hay auditoría que empezar, ni botón de guardar, ni servicios" do
     ingresar(users(:supervisor_prefactura))
     # El radio se cambia en la pantalla: el que manda es el botón de «nuevas».
     patch hoja_de_preparacion_url, params: { empezar: "1", hoja: { modo: "editar" } }
@@ -159,7 +161,19 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
     get hoja_de_preparacion_url
 
     assert_select "button[name=empezar]", count: 0
-    assert_select "button[type=submit][data-shortcut=F8]", text: /Guardar la hoja/
+    assert_select "button", text: /Guardar la hoja/, count: 0
+    assert_select "input[type=checkbox][name='hoja[tipo_envio_ids][]']", count: 0
+    assert_select "input[type=radio][name='hoja[modo]'][data-action='change->auto-envio#enviar']", count: 2
+  end
+
+  # PR-P.12 · A las 10:47 la hoja decía 07:30 y nadie sabía que F9 avisaba en
+  # el acto.
+  test "si la hora de la hoja ya pasó, lo dice" do
+    ingresar(users(:supervisor_prefactura))
+    patch hoja_de_preparacion_url, params: { hoja: { modo: "nuevas", fecha: Date.current.iso8601, hora: "00:01" } }
+    get hoja_de_preparacion_url
+
+    assert_select "[data-hora-pasada]", text: /F9 le avisa al cliente al instante/
   end
 
   test "«editar» lista las pre-facturas sin avisar de cada manifiesto, con su link" do
