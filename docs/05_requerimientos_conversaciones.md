@@ -13596,7 +13596,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-01` | La planilla de notificaciones, como lista de trabajo | 📄 Las filas abajo; el texto de cada correo lo da Yusef |
 | `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ✅ El primer correo de cada pre-alerta, del portal o del personal; la casilla se cambia en `Configuracion` si `RP-109` dice otra |
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ✅ `ResumenDeEnviados`, 18:00 de Honduras; texto provisional hasta la plantilla de Yusef |
-| `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
+| `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado. ▶ **2026-10-30** (`C34-08`): Yusef contestó la mitad: siempre F9, avisa la recepción en destino y la hora la pone quien recibe. Lo de todas las etiquetas sigue en `RP-108` |
 | `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ✅ `CasilleroMailer` y «Mis Direcciones»; el texto es provisional hasta la plantilla de Yusef |
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
@@ -13610,5 +13610,433 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 |---|---|
 | `RP-106` | **El correo de «recibido»** (`C33-01` fila 2): la planilla dice *al recibir el paquete, al cliente*, sin condición; desde el 2026-08-26 sale solo si tiene pre-alerta o nota de política. ¿Pasa a salir con **todo** paquete recibido? |
 | `RP-107` | **La doble autenticación** (`C33-11`): ¿para el personal, para los clientes o para los dos? ¿Obligatoria u opcional? |
-| `RP-108` | **La sucursal externa** (`C33-04`): ¿el aviso espera a que lleguen **todas** las etiquetas grandes de la pre-factura, o sale por caja como hoy? ¿Qué fecha de trabajo se le pone en San Pedro? ¿El modal de «va para Tegucigalpa» al empacar? Yusef lo va a ver con el personal |
+| `RP-108` | **La sucursal externa** (`C33-04`): ¿el aviso espera a que lleguen **todas** las etiquetas grandes de la pre-factura, o sale por caja como hoy? ¿Qué fecha de trabajo se le pone en San Pedro? ¿El modal de «va para Tegucigalpa» al empacar? Yusef lo va a ver con el personal. ▶ **2026-10-30** (`C34-08`): F9 siempre, el aviso lo da la recepción en destino a la hora que elige quien recibe, y el modal de «va para…» va al escanear el QR de peso y al imprimir. Queda solo lo de **todas** las etiquetas grandes |
 | `RP-109` | **La casilla de SAC** (`C33-02`): ¿`sac@comprasexpresshn.com` está activa y es la que va en copia? |
+
+## Conversación 34 (2026-10-30) — la pasada con el equipo de San Pedro: el consolidado que no suma, el «grupo incompleto» que frena el arranque, y la lista de recomendaciones del personal
+
+Dos grabaciones del viernes, en la oficina, con Yusef y el equipo de
+pre-factura y medición. En la primera se corrió el flujo entero en staging con
+dos manifiestos, un consolidado de prueba (la clienta de prueba «Lucía», pre-alerta
+120 con cinco paquetes, uno que todavía no llegaba a Miami) y paquetes sueltos
+sin pre-alerta. En la segunda, Yusef lee **una lista de recomendaciones que el
+personal escribió para el sistema nuevo**, punto por punto, y él y Jorge
+reaccionan a cada una.
+
+| Audio | Duración | De qué |
+|---|---|---|
+| 15:44 | 110 min | La pasada: el manifiesto en Miami, recibir carga, guías y aduana, medición del consolidado, pre-factura. Dos errores que se vieron en pantalla y varias decisiones |
+| 18:48 | 22 min | La lista del personal: 23 puntos, casi todos de pre-factura y medición. Unos ya están, otros Yusef los aprueba, otros quedan para revisar |
+
+> ⚠️ **Sobre el transcript.** Plaud no generó resumen ni transcripción, así
+> que va `whisper small` en 23 pedazos de 6 minutos. El «min» es el de la
+> grabación que se nombra. Los nombres salen mal: «Batiz/Bati/Betis» (alguien
+> del equipo), «Alexi(s)» (quien recibe en Tegucigalpa) y «Lucía» (la clienta de
+> prueba) se dejan como suenan. No se documentan los tramos personales (15:44,
+> min 30–36, 54–60 y 66–72) ni los comentarios de 18:48 min 6–12 sobre el
+> personal y las contrataciones.
+>
+> Todo sale **del audio**, sin foto. Los dos errores marcados ❌ se vieron en
+> pantalla en staging. Lo demás que dice *a confirmar* no se codifica sin hablarlo
+> antes con Yusef.
+
+### A. La pasada (15:44), en el orden del trabajo
+
+#### C34-01 · Una hora con el equipo los martes (min 0–6)
+
+Cuando la carga llega un día tarde, se descuadra la semana. El viernes es el
+día libre, y si se atrasa la del martes *"ya nos fregaron"*. Yusef propone
+juntarse con el personal **los martes a las 4**:
+
+> "Solo una hora con ellos es más que suficiente… necesitamos unas ideas de
+>  ellos, que ellos vean que sí va de acuerdo."
+
+Dos cosas de personal, sin pedido al sistema:
+- Van a pasar a **una persona de pre-factura a medir**, para tener tres o
+  cuatro midiendo, que es lo que Yusef pensaba desde el principio.
+- Los de medición pidieron un **teclado numérico aparte**, con las teclas más
+  separadas: *"por muy touch que le ponga la computadora, ponga un teclado…
+  solo uno de esos para los números"*. Es hardware.
+
+#### C34-02 · Miami: el manifiesto (min 30–48)
+
+Lo que se probó y anduvo:
+- El aviso de sucursal al escanear (`C29-07`): *"te dice: este manifiesto va
+  para San Pedro y retira en Humuya"*.
+- «No se finalizó: la caja 1 no tiene peso».
+
+Lo que pidieron:
+- **«Empacar sin escanear» abajo, junto al escaneo**: *"yo creo que debería de
+  agregarlo acá abajo, donde está el escaneado"*.
+- **«Finalizar e imprimir» también arriba**: *"porque uno se va a confundir,
+  yo conozco a mi gente"*.
+- **Sacar y meter después de finalizado, escaneando**: *"si vos escaneás uno lo
+  quita y si volvés a escanearlo lo agrega"*. Eso ya está desde `C30-06`: el
+  supervisor abre con «Editar», «Eliminar paquetes» escaneando, y el escaneo
+  mete en uno reabierto. Yusef: *"nunca lo probamos al revés"*. Falta
+  **probarlo**, no construirlo.
+- **Enter en un modal de confirmación apretó «Cancelar»**: *"le di enter y dice
+  cancelar… Debería ser al revés"*. ❓ No se ve cuál modal era. Hay que mirar
+  qué botón tiene el foco en los confirm del manifiesto.
+- **Los pallets de Tegucigalpa.** En San Pedro tienen que saber en qué pallet
+  viene lo de Tegucigalpa sin desarmar dos pallets: *"si sacan cuatro pallets…
+  tiene que ir agregando para qué sucursal va cada pallet"* · *"que ellos sepan
+  dónde está Tegus, porque no hay que desempacar dos pallets enteros de carga
+  para encontrar todos los paquetes"*. Hablaron de una etiqueta en el pallet que
+  diga que adentro va carga de Tegucigalpa. El sistema no tiene pallets. ❓
+  `RP-110`.
+- **Cuántos llevo hoy.** Los de Miami preguntan *"¿cuántos paquetes llevo hecho
+  el día de hoy?"*, y Yusef quiere **metas** para la pre-facturación: *"cuánto
+  debería de salir, a ver cómo salimos"*. Queda anotado.
+- **«Enviados según políticas»** con razones más específicas: *"se envió aéreo
+  debido a que pesa o mide menos de 15 libras… de noviembre a diciembre, debido
+  a la alta temporada"*. El catálogo existe (`motivos_envio_politica`). Lo que
+  falta es el texto de las razones, y lo carga el equipo.
+
+#### C34-03 · «Empacar sin escanear» y el tracking de dos cajas (min 90–96) — ❓ a reproducir
+
+Un tracking dividido en dos cajas (un warehouse, dos paquetes). Se mandó una
+sola, después se usó «empacar sin escanear» para meter lo que quedaba, y la
+segunda **no entró**. Al recibir en Honduras, **no se le actualizó el estado**:
+
+> "Yo solo mandé uno, se quedó el dos, después le dije: meter todo lo que
+>  estaba, y no lo agarró." · "Cuando lo jala sin escanear… lo recibí en
+>  Honduras, no les cambió los datos."
+
+Jorge: *"son dos, pero el mismo problema, la causa es la misma"*.
+`EmpacarSinEscanear#candidatos` toma `sin_manifiesto`, en `recibido_miami` y
+recibido en la sucursal de origen. Leyendo el código no se ve por qué la segunda
+caja quedaría afuera. Hay que reproducirlo con un split. Ojo: en este repo, las
+cajas de un split se encuentran por tracking.
+
+#### C34-04 · Guías y aduana, y recibir carga (min 42–66)
+
+**La fecha probable, sin correo.** Son dos fechas. La del correo es la que sale
+contando días (`C31-11`). La otra es más exacta y se pone cuando se confirma la
+carga:
+
+> "El miércoles ya tenemos la confirmación que viene la carga, viene Vanessa,
+>  entra la guía que vamos a recibir es esta, entonces ya le ponemos fecha que es
+>  para mañana… el cliente en la mañana dice: ya la fecha es para hoy." ·
+> "**No el correo**, no manda correo otra vez ni nada." · "Solo es la fecha…
+>  el correo no pone hora."
+
+✅ **Ya está.** En /guias_aduana, la `fecha_posible_entrega` del manifiesto se
+copia a sus paquetes (`Manifiesto#copiar_fecha_posible_entrega_a_los_paquetes`)
+y ningún correo sale de ahí. La fila que *"se desaparece"* al guardar es el
+filtro de pendientes: se ve con «Ver todo». En el historial de manifiestos ya
+salen la guía y el estado, que pasa solo a «terminado de prefacturar» con el
+último paquete.
+
+**Recibido en aduana, escaneado.** Yusef lo dijo como ventaja: *"ahí no va a
+haber error como en el que tenemos nosotros, que por error le damos manualmente
+recibido en aduana… tiene que ser escaneado"*. Sin pedido.
+
+**Con la cámara del iPad.** El equipo pide poder recibir el manifiesto con un
+iPad, escaneando el QR con la cámara: *"que active la cámara y que escanee, y así
+les puede ir diciendo: falta tal, va tal"*. Yusef lo deja para después de
+terminar el proceso: *"yo quiero terminar el proceso"*. Futuro.
+
+**Botones con PIN en recibir carga**: *"estos botones tienen que llevar pin"*.
+«Terminar» con faltantes ya pide PIN (`recepcion_carga/_terminar_con_pin`). ❓ No
+queda claro qué otro botón decía.
+
+#### C34-05 · Medición: el consolidado que se mide en partes no suma (min 6–12, 24–30, 60–72, 90–96) — lo primero a corregir
+
+Lo que le pasó a alguien del equipo en una prueba anterior:
+
+> "Primero puse dos trackings y los mandé a prefactura. Le puse consolidando.
+>  Lo mandé, volví a escanear los otros trackings que tenía y **me los agregó
+>  como un nuevo peso, no lo sumó al anterior**." · "Lo marcó como tres
+>  mediciones al final, no las unificó… Te sacó tres volúmenes."
+
+Yusef:
+
+> "Si el cliente está consolidando, es **actualización de pesos**." · "En
+>  medición es donde me hace falta que agregue el nuevo peso, no que le agregue
+>  un peso más. **Es la primera cosa que hay que corregir ahí**." · "Eran diez,
+>  tenía dos paquetes en San Pedro, en el estante; tenía que haber jalado las
+>  dos y agregárselas a las ocho."
+
+**Lo que hay hoy.** Si llega una caja para un consolidado ya medido, medición
+ofrece *«medir de nuevo todo junto»* o *«medirla sola»*
+(`MedicionController`, l. 380–399). Una pre-factura guardada con F8 se reabre
+cuando se escanea uno de sus volúmenes (`AuditoriaDeTanda`, l. 182–196). En la
+pasada se llegó a ese modal (min 90–96): *"Medirla sola, medir de nuevo todo
+junto… y se borra todo el volumen y peso anterior"*. No queda claro si «medir de
+nuevo todo junto» es lo que Yusef llama *actualización de pesos*, o si quiere
+sumarle el peso nuevo al volumen que ya está, sin volver a medir lo del
+estante. ❓ `RP-111`.
+
+Lo que pidieron, en la misma pantalla:
+- **Decir «consolidado» desde el primer escaneo**: *"como es el primero, le
+  tiene que decir: este paquete es de un consolidado… ahí no lo vi"*. Y al
+  imprimir la etiqueta: *"no te lo dice, pero te lo muestran en la imagen"*.
+- **«Falta uno que no ha llegado a Miami», escrito**, y más grande que los
+  cuadritos (min 102–108): *"6 de 6, falta uno, pero debería decir falta uno que
+  no ha llegado a Miami… es más explícito lo que te dijo Vanessa también"*.
+- **«Paquetes», no «cajas»**: *"cuando vos le decís cajas ellos no saben de qué
+  estás hablando"*. Jorge: *"tengo que cambiar el lenguaje de caja para
+  paquetes"*.
+
+Lo que se probó y anduvo:
+- El paquete sin pre-alerta escaneado en la tanda de un consolidado: *«no está
+  en ninguna pre-alerta»* → «Sigo sin él», y se aparta. Yusef: *"y así lo
+  hacemos"*.
+- Un paquete que está en la pre-alerta pero todavía no llegó a Miami se puede
+  pasar a la pre-alerta de hoy, *"siempre y cuando no haya llegado a Honduras"*.
+  Es la regla de mover que ya existe.
+
+#### C34-06 · Medición: el contador «5 de 6» que no cuadra (min 96–108) — ❌ visto en pantalla
+
+Dos errores en la misma cuenta del consolidado de la pre-alerta 120:
+
+1. **Cuenta el que se apartó.** Se escaneó el 83 de Lucía, que no es de la
+   pre-alerta, y se eligió «Sigo sin él». El contador lo sumó igual: *"nosotros
+   hemos escaneado 5 veces… el quinto no lo debería contar, porque lo
+   eliminé"*. La lista mostraba cuatro.
+2. **No trae lo que se midió antes.** *"Cuatro escaneadas, una medida… no está
+   jalando la que ya medimos, la primera… tiene que jalarlo para que concuerde
+   cuáles son."*
+
+Hay que reproducirlos con un test: consolidado de N paquetes, una tanda medida
+antes, una caja ajena apartada con «Sigo sin él».
+
+#### C34-07 · Pre-factura: «es de un grupo que todavía no está completo» frena el arranque del consolidado (min 6–12, 66–78, 108–114) — ❌ visto en pantalla
+
+Al auditar la tanda del consolidado salió el mensaje de
+`AuditoriaDeTanda` (l. 137–141): *«… es de un grupo que todavía no está
+completo: falta medir lo demás, o que un supervisor autorice facturar lo que
+hay»*. Yusef:
+
+> "Ahí está el error que te platicamos hace rato." · "Aquí no debería ser
+>  bloqueado. — Exacto, porque **estamos empezando** a hacerle el
+>  consolidado." · "Cliente inicia el consolidado. O tiene un agrupado. Si ya
+>  tiene agrupado, el sistema le dice que tiene que ir a traer los estantes."
+
+Y al cierre (min 108–114): *"como no la podemos facturar… es un grupo que
+todavía no está completo, es el error… tiene que ir a abrir la prefactura y
+poder meterle esto, ponerle el otro, cambiarle el precio de cobros, con
+autorizaciones"*.
+
+**Por qué pasa.** `Paquete#listo_para_prefactura?` (`C26-03`) exige el grupo
+completo, cerrado o con «facturar lo que hay» sellado. F8 («guardar
+consolidando») reabre una pre-factura que **ya existe**, pero la primera tanda
+de un consolidado nunca llega a crearla: el bloqueo va antes. O sea que F8 no
+puede **empezar** un consolidado. Esto cambia en parte lo que se decidió en
+`C26-03`: *"pueden haber excepciones donde toque facturar lo que se
+encuentre"*. Ahora Yusef quiere que la excepción sea **el camino normal del
+arranque**.
+
+Dos casos más del mismo bloqueo:
+- **El PIN de medición no pasa a pre-factura** (min 6–12, y el punto 23 de la
+  lista del personal): *"venían 10, faltan dos… va a omitir y solo medir, pasa,
+  pero inmediatamente nos da error en prefactura; tuvimos que regresar a
+  agregar los otros ocho para poder hacer la prefactura"*. El PIN
+  `medicion_con_faltantes` deja guardar la medición (`MedirBulto`, l. 100–118),
+  pero no deja la caja `listo_para_prefactura?`. El consolidado sigue pidiendo
+  «facturar lo que hay» aparte, y un split sin pre-alerta no tiene pase parcial
+  (`GrupoDeUnion`, l. 172–175).
+- **Los sueltos del mismo cliente** (min 72–78): *"en caso que no tenga
+  prealerta, sí debería dejarnos hacer la prefactura igual"*. La clienta puede
+  tener dos pre-facturas: el consolidado y lo suelto.
+
+Lo que se desprende, *a confirmar* (`RP-112`):
+- **F8** deja pasar el grupo incompleto, con la nota *«el cliente inicia el
+  consolidado»*.
+- Si el cliente ya tiene un agrupado en el estante, avisa *«traer del
+  estante»*.
+- **F9** con paquetes todavía en tránsito pregunta antes de notificar. Es el
+  punto 14 de la lista, que Yusef aprobó.
+- El PIN de medición con faltantes **cuenta** como «facturar lo que hay».
+
+#### C34-08 · La sucursal que no es San Pedro: siempre F9, y avisa quien recibe allá (min 72–84) — responde parte de `RP-108`
+
+> "Si es de Tegus, ustedes ya no tienen que guardar F8… cuando el manifiesto
+>  llega a Tegus y él confirma que ya lo recibió, el sistema le va a
+>  notificar." · "Todo lo que está para notificarse le va a dar F9, no importa
+>  que sea de donde sea… **el F8 va a ser para consolidar**." · "No va a
+>  notificar si es de una sucursal y no ha llegado a la sucursal. Alexis escanea
+>  esta hoja y eso lo activa… lo va a mandar a cola."
+
+**Y la hora la pone quien recibe**:
+
+> "Imagínense, llegan 200 paquetes a Alexis, no va a estar el sistema
+>  notificándole en el acto los 200… recibir carga interna, manifiesto, ¿a qué
+>  hora es lo notificado? Tal hora."
+
+Con eso, `C33-04` queda así:
+- **F9 programado no avisa** al cliente de otra sucursal.
+- **Avisa la recepción del manifiesto interno** en destino.
+- Quien recibe **elige la hora** del aviso, como la hoja de pre-factura en San
+  Pedro.
+
+Sigue abierto si espera **todas** las etiquetas grandes de la pre-factura.
+
+**El modal de «va para…».** El equipo quiere saber adónde va antes de elegir
+F8 o F9, por el caso de la nota «dejar en San Pedro» (`C33-09`): *"un modal que
+le diga para dónde va… cuando escanean el QR de peso… y al final, cuando
+impriman la etiqueta también"*. Y de esa etiqueta: *"hay que traerla, porque
+tenemos que modificar el tamaño de la letra"*. ❓ No se dice cuál letra.
+
+**Corregir antes del aviso.** Yusef preguntó qué pasa si se manda una orden y
+se corrige a los cinco minutos. Jorge: *"el sistema agarra la última… no le
+caen dos veces al cliente"*. Lo contó con un caso del sistema viejo: un «iPhone
+18 Pro Max» en la descripción que se cambió antes de que saliera el correo,
+porque el correo sale cada 30 minutos o cada 100. Contexto, sin pedido.
+
+#### C34-09 · Las instrucciones del cliente, solo para Miami (min 90–102) — decisión
+
+En el modal de notas de medición salieron dos instrucciones que el cliente puso
+en la pre-alerta (*«prueba de alerta grupo»*, *«revisarlo»*). Esas eran para
+Miami:
+
+> "Conociendo a estos muchachos, van a estar pensando que lo tienen que hacer…
+>  pierden el tiempo, agarran el paquete… y se atrasan." · "Para mí, separar
+>  la función de Miami y la función de prefactura." · "— ¿Qué hago con
+>  instrucciones? — **Que le aparezca a Miami nada más**… y ponerle
+>  *instrucciones a Miami*. Y obviamente los títulos."
+
+Si el cliente quiere que le junten todo, no lo escribe en una nota: *"en la
+pre-alerta le sale la pregunta bien especificada, ¿quiere agrupar o no?"*.
+
+**Lo que cambia:**
+- `MedicionController` (l. 551) mete las `instrucciones` de cada renglón en el
+  modal de notas. `PanelContextoHelper` (l. 24) las muestra como «Notas
+  especiales». Las dos salen de medición y de pre-factura.
+- Siguen en /etiquetar, que es para quien son.
+- En el portal, el campo se llama *«Instrucciones para Miami»*.
+- Cada nota lleva el título de dónde viene.
+
+Es lo mismo de `C16-01` llevado un paso más allá: la instrucción del cliente es
+una **nota para quien recibe en Miami**. No es tarea, y no es para Honduras.
+Pantallas gemelas: el wizard del portal y la ficha del personal.
+
+#### C34-10 · Las notas: una de medición, y frases de un toque en la pre-factura (min 18–24, 84–90)
+
+**En el cliente.** Hoy tiene `notas_miami`, `notas_honduras`, `notas_caja` y
+`notas_sac`:
+
+> "Si va a faltar aquí agregar ahora **notas medición**, porque ahora ya van
+>  a tener más tareas, entonces tienen que tener ciertas notas."
+
+De paso, en la ficha:
+- No se ven las **tareas** del cliente (*"faltó las tareas"*).
+- Hay que ordenar los datos de contacto: nombre de WhatsApp contra teléfono, y
+  correo de acceso contra correo de notificación. *"Creo que hay que
+  reorganizar un poco ahí, porque como lo he ido metiendo…"*.
+
+**En la pre-factura, botones con las notas de siempre:**
+
+> "Va a tener botoncitos para que ustedes solo le pongan… notas que son bien
+>  comunes, o sea, repetitivas." · "Se le metió un paquete adentro de la caja."
+>  · "Se consideró peso o volumen fuera de la caja."
+
+Van en la **pre-factura final que le llega al cliente**, la del correo de
+«disponible», y no en la calcomanía: *"si usted viene a traer una caja de
+zapatos y compró un reloj… y es del cliente que no lee la descripción"*.
+También le sirven al que entrega: *"si él ve que va dentro de la caja"*. Las
+frases las da el equipo (`RP-113`).
+
+#### C34-11 · La pre-alerta que no se dejaba borrar (min 12–18) — ❓ a reproducir
+
+> "Yo creé una, sólo era una y no me dejaba borrarla."
+
+Jorge, en el momento: *"hay un caso que no te deja borrar, que es cuando es no
+consolidado y solo es uno, creo… ya voy a ver eso"*. En el portal,
+`Cuenta::PreAlertasController#puede_eliminar?` no deja borrar el renglón si la
+pre-alerta está finalizada o el renglón ya tiene paquete. Falta ver si era eso
+o la pre-alerta entera, y desde qué pantalla.
+
+#### C34-12 · Dicho de pasada (contexto, sin pedido)
+
+- **Más sucursales** (min 18–30): *"si queremos crecer, necesitamos abrir
+  sucursales o negociar algo con algún lado"*. Por eso la ficha va a decir la
+  sucursal y no «Tegus». El modelo ya tiene sucursales en catálogo.
+- **Pistolas por bluetooth** con una base de carga (min 30–36). Hardware.
+- **El sistema viejo dejó de mandar correos** un lunes y martes y nadie lo vio
+  (min 78–84). Es del legacy, pero es la razón de mirar /signos_vitales.
+
+### B. La lista del personal (18:48)
+
+Yusef la lee de un papel. Antes de empezar: *"bueno, mejor menos, pero es que
+hay variantes"*. La columna que importa es la de Yusef: no todo lo que pide el
+personal se va a hacer.
+
+| # | Lo que pide el personal | Qué dijeron Yusef y Jorge | Hoy en el código | Estado |
+|---|---|---|---|---|
+| 1 | Si el cliente retira el agrupado incompleto, poder volver a escanear paquetes con la misma pre-alerta | *"Lo que dijimos: vas a crear una pre-alerta nueva, o la ibas a eliminar"* | El paquete que llega para una pre-alerta ya facturada *"se factura aparte"* (`MedicionController`, l. 730) | 📄 Ya decidido: pre-alerta nueva |
+| 2 | Que la fecha de trabajo se actualice sola, solo al dar F8 o F9 | *"Eso sí, dependiendo el caso"* | F8/F9 escriben `fecha_trabajo` desde la hoja (`GuardarPreFacturaAuditada`, l. 213). Pero la hoja vive en la sesión del usuario y no pasa a hoy por sí sola | ❓ `RP-114`: ¿qué fecha se actualiza sola? |
+| 3 | Que el sistema solo deje escanear paquetes de la misma pre-alerta | *"Eso está en edición… lo que ellos quieren es que el sistema le diga que ese paquete pertenece… ya le dice"* | Medición rechaza la caja de **otro consolidado** con el modal «no mezclar» (`PuedenIrJuntas`, l. 97) | ✅ En medición |
+| 4 | Que el peso de la etiqueta final no cambie al agregar un cobro extra | Jorge: *"ah sí, hay un error ahí"*, y después *"bueno, no"*. El caso: 5 + 2 = 7 lb, y con «cambio de servicio» la etiqueta decía 8 | `EtiquetaDeEntrega#libras` suma solo las líneas de flete (`manual`/`volumen`), y hay test de que el cobro extra no cuenta. Lo más probable es que el 8 salga del **redondeo y el mínimo** del servicio nuevo, no del cobro | ❓ A confirmar con un caso real. Puede ser del sistema viejo |
+| 5 | En la etiqueta de pre-factura, elegir «unir» o «consolidando» sin marcadores; F8 = consolidando | *"Ya lo hiciste"* | F8 imprime con la franja CONSOLIDANDO | ✅ |
+| 6 | Precio especial por proveedor (Shein, Temu, doTERRA, farmacia) con una tecla | Sin comentario | La tarifa ya cae sola por proveedor: cliente → proveedor → categoría → lista (`Tarifa`, l. 142). No hay tecla | ✅ Automático. La tecla no hace falta salvo que Yusef diga otra cosa |
+| 7 | Agregar cobro CK/CKM y «pagado en Miami» a los precios del sistema | **Yusef lo quiere.** Cuando no se reempaca, se le cobra al cliente como sin reempaque, y hoy el personal teclea el precio y se equivoca: *"Jorge tiene 90 en aéreo y 70 en marítimo, y ellos ponen 90"*. Pide que, con el PIN de autorización, el sistema *"jale cuál es la tarifa que tiene Jorge y le ponga esa tarifa en CKM"*. Jorge: *"la que está en el perfil"* | No hay forma de agregar una línea a la pre-factura. El PIN solo cambia precio, peso, descuento o borra. El flete de un paquete CKM ya usa la tarifa del cliente. «Pagado en Miami» es automático (US$1) | ❌ Falta: «cobrar como sin reempaque», con PIN, que tome la tarifa CKA/CKM del cliente (`RP-115`) |
+| 8 | Alerta al iniciar la pre-factura si el cliente tiene tarifa especial o no paga mínimo | *"Podemos poner ahí: cliente no paga mínimo"*, al escanear el QR de peso | Solo avisa del prepagado | ❌ Falta. Aprobado |
+| 9 | Alerta de que el cliente es de Tegucigalpa al iniciar la pre-factura o al poner el código | Sí. Es el modal de `C34-08` | El aviso rojo de sucursal está solo en Miami | ❌ Falta. Aprobado |
+| 10 | Para Tegucigalpa, una sola tecla que imprima la orden y la etiqueta | *"Buen punto, que creemos F10"*. La hoja va con la carga *"como comprobación de qué es lo que va"* | F8/F9 imprimen solo la etiqueta. La orden es «Ver imprimible» aparte | ❌ Falta. Aprobado |
+| 11 | Que las etiquetas de recepción lleven el número de pre-alerta, no «agrupado» | Yusef: *"es hasta bueno, mejor, por favor… ayudaría para control visual, no tiene que ser tan grande"*. Jorge: *"no tengo espacio ahí… te lo voy a intentar"* | La etiqueta de volumen de medición ya lleva «PA-…». La de recepción de Miami no tiene ese campo | ❌ Falta, si cabe. En la Dymo hay que medir, no adivinar |
+| 12 | La guía de trabajo de «Preparar pre-factura» la crea el supervisor y les asigna a los demás, para que todos tengan la misma fecha | *"Estoy a punto de decirte que no, pero dame una buena razón."* — *"Porque copian lo que quieren y ponen lo que quieren."* No se cierra | La hoja es por usuario, en la sesión | ❓ `RP-116` |
+| 13 | Una sección aparte para auditar la carga una vez finalizada, y que la pre-factura auditada lo diga | *"No sé qué es, ni yo."* Yusef cree que es lo que hace Vanessa al revisar pesos y medidas después de medición: *"eso ya está"* | Se guarda `auditado_por_id`, pero no se muestra | ❓ Sin pedido claro. Mostrar quién auditó es barato |
+| 14 | Al dar F9, alerta si la pre-factura todavía tiene paquetes en tránsito de la misma pre-alerta (consolidando) | *"Tiene sentido… está muy bueno"*. F8 guarda consolidando; F9 es que ya terminó, y si queda uno en tránsito: *"¿está seguro que desea notificarlo?"* | Hoy es un **bloqueo duro** (`grupo_incompleto`), no una pregunta (`C34-07`) | ❌ Falta. Aprobado: pasa a confirmación |
+| 15 | Un botón para sumar más de dos volúmenes o pesos | *"Eso ya está en el sistema. Está más que hecho."* | «Agregar volumen» (F5), hasta 10 por tanda | ✅ |
+| 16 | Al poner el código del cliente en cualquier envío, alerta si tiene un agrupado existente | *"Eso ya no es pre-factura, ya es medición… ya vamos a ver esa parte"* | Medición lo dice al **escanear** («UNIR con PA-…»), no al poner el código | 📄 Va con `C34-07` («traer del estante») |
+| 17 | Pre-alertas en colores distintos para ver cuáles van juntas | Lo hacían a mano en pre-factura; ahora es medición: *"hay que adaptarle un poquito a que se entienda"* | Una etiqueta de texto uniforme «UNIR · PA-…» | 📄 Va con la claridad de `C34-05` |
+| 18 | Un sonido cuando aparece cualquier nota, o paquetes en otras pre-facturas con agrupado | *"En medición ya lo tenés… no lo hemos podido probar por el bloqueo"* | El modal de notas de medición suena. Auditar no tiene notas | ✅ En medición. Probar cuando caiga `C34-07` |
+| 19 | Que al agregar un cobro como cambio de servicio no se borren los trackings que ya tienen precio; que al incluir pre-alertas no se borren los paquetes ya seleccionados | *"No es la ejecución tuya"*: es del sistema viejo | Reabrir agrega solo las líneas nuevas. El formulario manual donde se seleccionaban paquetes ya no existe | ✅ No pasa en el nuevo |
+| 20 | Que las notas internas del paquete se vean al escanear, debajo de la descripción, en letra chica y cursiva | Sin respuesta clara | Las «Notas internas» salen en el modal de notas de medición, no debajo de la descripción. Auditar no muestra notas | ❓ Revisar con `C34-09` |
+| 21 | Los **desconocidos**: corregir la pre-factura cuando aparece el dueño, sin borrarla y crear otra | Yusef: entran como desconocidos, se pre-facturan al final del día (*"a la una y media empiezan a hacer todos los desconocidos"*) para darle tiempo al cliente, y cuando reclama *"tienen que venir y borrarlo y crear una prefactura nueva y cambiarle nombre"*. Quiere que sea **corrección, no reprocesamiento**. Lo dejó para otra reunión: *"me tengo que ir a las 7:15"* | No hay concepto de desconocido. El cliente de la pre-factura no se edita. El del paquete sí, pero deja la pre-factura con el cliente viejo. Lo limpio hoy es anular → cambiar el cliente → re-auditar | ❓ `RP-117`, a tratar aparte |
+| 22 | *«La tarifa Shein consolidado en dos manifiestos sin consolidar independiente»* | ❓ No se entiende en el audio | — | ❓ Pedir el papel |
+| 23 | Poder pre-facturar aunque haya pendientes en medición, si ya pasó con PIN de autorización | *"Me faltó esa parte en medición, lo que hicimos hoy"* | El PIN de medición no pasa a pre-factura (`C34-07`) | ❌ Falta. Aprobado |
+
+Los puntos 14 y 23 son el mismo arreglo que `C34-07`, y el 9 es el modal de
+`C34-08`. En la reunión de 18:48 Yusef también mostró la pre-alerta de la
+competencia, con pasos numerados (rastreo, tienda, alias, cantidad). El wizard
+del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
+
+### En qué orden conviene arreglarlo
+
+1. **`C34-07`**: F8 deja empezar el consolidado, F9 pregunta en vez de trabar,
+   y el PIN de medición pasa a pre-factura. Desbloquea la prueba entera (lista
+   14, 18 y 23).
+2. **`C34-06`**: el contador del consolidado. Error visto, con caso para test.
+3. **`C34-05`**: sumar al anterior, una vez que Yusef conteste `RP-111`. Y de
+   paso: «consolidado» desde el primer escaneo, «falta uno que no ha llegado a
+   Miami», y «paquetes» en vez de «cajas».
+4. **`C34-09`**: las instrucciones, solo en Miami.
+5. **`C34-08`**: la sucursal externa avisa al recibir, a la hora que pone quien
+   recibe. Más el modal de «va para…» (lista 9) y F10 (lista 10).
+6. **`C34-03`** y **`C34-11`**: reproducir primero.
+7. El resto de la lista aprobado: 7, 8 y 11.
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C34-01` | Reunión de una hora con el equipo, los martes a las 4 | 📄 Operativo |
+| `C34-02` | Manifiesto de Miami: «empacar sin escanear» abajo, «finalizar e imprimir» arriba, Enter en el confirm, pallets de Tegucigalpa, metas | ❌ Botones y confirm. ❓ `RP-110` pallets. Sacar/meter después de finalizado ya está (`C30-06`), falta probarlo |
+| `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ❓ A reproducir |
+| `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
+| `C34-05` | El consolidado que se mide en partes: sumar al anterior | ❌ Falta; la forma espera `RP-111` |
+| `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ❌ Falta |
+| `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ❌ Falta. Lo primero (`RP-112`) |
+| `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
+| `C34-09` | Instrucciones del cliente solo para Miami | ❌ Falta. Decidido |
+| `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ❌ Falta. Las frases esperan `RP-113` |
+| `C34-11` | La pre-alerta que no se dejaba borrar | ❓ A reproducir |
+| Lista 7 | Cobrar como sin reempaque con la tarifa CKA/CKM del cliente, con PIN | ❌ Falta (`RP-115`) |
+| Lista 8, 9, 10, 11 | Aviso de tarifa especial / sin mínimo; aviso de Tegucigalpa; F10; número de pre-alerta en la etiqueta de recepción | ❌ Falta. Aprobados |
+| Lista 21 | Desconocidos: corregir sin reprocesar | ❓ `RP-117` |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-110` | **Los pallets de Tegucigalpa** (`C34-02`): ¿una etiqueta por pallet que diga qué sucursales lleva adentro? ¿O alcanza con que el manifiesto diga en qué caja va lo de cada sucursal? El sistema no tiene pallets |
+| `RP-111` | **El consolidado que llega en partes** (`C34-05`): cuando llegan los que faltaban, ¿se vuelve a medir todo junto (lo que ofrece hoy medición, y borra lo anterior), o se le **suma** el peso y el volumen nuevo a lo que ya estaba, sin volver a medir lo del estante? |
+| `RP-112` | **El arranque del consolidado en pre-factura** (`C34-07`): ¿F8 deja pasar el grupo incompleto con la nota «el cliente inicia el consolidado»? ¿Y el PIN de medición con faltantes cuenta como «facturar lo que hay»? |
+| `RP-113` | **Las notas de un toque de la pre-factura** (`C34-10`): ¿qué frases van? Las dichas fueron «se le metió un paquete adentro de la caja» y «se consideró peso o volumen fuera de la caja» |
+| `RP-114` | **La fecha de trabajo** (lista 2): ¿qué es lo que tiene que actualizarse solo? ¿Que la hoja pase a hoy cada día, o que la pre-factura tome la fecha al dar F8/F9 aunque la hoja diga otra? |
+| `RP-115` | **Cobrar como sin reempaque** (lista 7): ¿la línea reemplaza al flete del paquete, o se agrega como descuento? ¿Quién pone el PIN? |
+| `RP-116` | **La guía de trabajo del supervisor** (lista 12): ¿la crea el supervisor y la comparten todos los de pre-factura, o sigue por usuario? |
+| `RP-117` | **Los desconocidos** (lista 21): cuando aparece el dueño, ¿se le cambia el cliente a la pre-factura con PIN, o se le cambia el cliente al paquete y la pre-factura se rehace sola? Yusef lo quiere ver en otra reunión |
