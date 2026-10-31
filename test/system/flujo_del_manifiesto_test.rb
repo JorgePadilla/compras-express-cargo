@@ -153,6 +153,28 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     assert_selector "#manifiesto-acciones-abajo button", text: "Solo Finalizar"
   end
 
+  # C34-02 · *"Le di enter y dice cancelar… Debería ser al revés."* Finalizar
+  # se corrige con «Editar» (C30-06): el confirm abre con el foco en
+  # «Confirmar», y Enter finaliza.
+  test "Enter en el confirm de «Solo Finalizar» finaliza" do
+    abrir_manifiestos
+    crear_manifiesto
+    agregar_el_paquete
+    numero = find("h1").text[/M[A-Z]{3}\d{4}\d*/]
+
+    find("#manifiesto-acciones-arriba button", text: "Solo Finalizar").click
+    assert_selector MODAL_CONFIRMAR, visible: true, wait: 5
+    # El foco se pone en un `setTimeout`: se espera a que llegue.
+    page.document.synchronize(5) do
+      foco = page.evaluate_script("document.activeElement && document.activeElement.textContent.trim()")
+      raise Capybara::ElementNotFound, "el foco está en «#{foco}»" unless foco == "Confirmar"
+    end
+    page.driver.browser.action.send_keys(:enter).perform
+
+    assert_no_selector "#manifiesto-acciones-arriba button", text: "Solo Finalizar", wait: 5
+    assert Manifiesto.find_by!(numero: numero).bloqueado?
+  end
+
   # ── Y el que documenta la puerta misma ──────────────────────────────────
 
   test "la ficha ya no ofrece empacar escaneando: la barra dice en qué caja entra" do

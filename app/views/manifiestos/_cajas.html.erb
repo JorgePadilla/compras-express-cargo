@@ -20,32 +20,15 @@
         **Jorge:** "Le voy a poner empacar como grupo, y luego sin escanear y
         con escanear." · **Yusef:** "O sea, aquí está empacar **escaneando**. Y
         aquí sería **sin escanear**" · *"porque tienen que saber ellos qué son
-        los que hicieron sin escanear"*.
-
-        `sin_escanear` se calcula acá y no adentro del botón porque el número
-        va en dos lugares —el rótulo y el confirm— y tienen que ser el mismo. %>
-    <% sin_escanear = EmpacarSinEscanear.new(manifiesto) %>
-    <% candidatos = sin_escanear.aplica? ? sin_escanear.candidatos.count : 0 %>
+        los que hicieron sin escanear"*. Desde C34-02 «sin escanear» está
+        abajo, junto al escaneo (`_contenido`). %>
     <%# PR-C30.14 · `whitespace-nowrap`: con la tarjeta angosta «1 bulto(s)»
         se partía en dos renglones y los botones partían su texto. Que bajen
         enteros (`flex-wrap`), no por la mitad. %>
     <div class="flex flex-wrap items-center justify-end gap-3">
       <span class="text-sm text-gray-500 whitespace-nowrap"><%= manifiesto.cajas.size %> bulto(s)</span>
 
-      <%# **Va afuera del `cajas.any?`, y ése es el punto entero.** El camino
-          sin escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*,
-          y ahí no hay cajas ni pistola: si el botón viviera adentro de la
-          condición, solo aparecería cuando ya no hace falta. %>
-      <% if sin_escanear.aplica? %>
-        <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",
-              href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
-              disabled: candidatos.zero?, class: "whitespace-nowrap",
-              confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
-                       "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} que están en " \
-                       "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
-          Empacar sin escanear<%= " (#{candidatos})" if candidatos.positive? %>
-        <% end %>
-      <% end %>
+      <%# C34-02 · «Empacar sin escanear» bajó al escaneo (`_contenido`). %>
 
       <% if manifiesto.cajas.any? %>
         <%# Jorge: *"el botón de imprimir casi ni se mira"* y *"esos botones con
