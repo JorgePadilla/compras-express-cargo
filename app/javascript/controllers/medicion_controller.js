@@ -305,7 +305,7 @@ export default class extends conEnterAvanza(Controller) {
   _titulo(resultado) {
     return {
       no_encontrado: "No se encontró",
-      ambiguo: "Escaneá la caja, no el tracking",
+      ambiguo: "Escaneá la etiqueta del paquete, no el tracking",
       en_pre_factura: "Ya está en una pre-factura",
       no_esta_en_honduras: "Todavía no se recibió"
     }[resultado] || "Problema"
@@ -322,7 +322,7 @@ export default class extends conEnterAvanza(Controller) {
       this._consolidado(data)
     } else {
       // "repetida": no hay nada que decidir, es un pip de más.
-      this._problema("Esa caja ya la escaneaste", data.mensaje)
+      this._problema("Ese paquete ya lo escaneaste", data.mensaje)
     }
   }
 
@@ -505,7 +505,7 @@ export default class extends conEnterAvanza(Controller) {
     this._bultoParaReimprimir = data.tanda && data.tanda.etiquetas_url
     this._cuantasParaReimprimir = (data.tanda && data.tanda.volumenes.length) || 1
     this._paraRemedir = data.paquete
-    this._llenarProblema("Esta caja ya está medida", data.mensaje, { reimprimir: true, remedir: true })
+    this._llenarProblema("Este paquete ya está medido", data.mensaje, { reimprimir: true, remedir: true })
     this.problemaModalTarget.showModal()
     requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
   }
@@ -608,9 +608,9 @@ export default class extends conEnterAvanza(Controller) {
     // C29-16 · Lo suelto se cuenta por cliente y por manifiesto, y la línea lo
     // dice con las palabras de Yusef: *"Diego tiene cinco paquetes en el vuelo
     // y solo estás escaneando tres, y faltan dos en el mismo manifiesto"*.
-    const encabezado = g.consolidada ? `Consolidando ${g.numero} · ${g.total} cajas`
+    const encabezado = g.consolidada ? `Consolidando ${g.numero} · ${g.total} paquetes`
       : g.del_manifiesto ? `${g.cliente} tiene ${g.total} en el manifiesto ${g.del_manifiesto}`
-      : `Envío de ${g.total} cajas`
+      : `Envío de ${g.total} paquetes`
     const partes = [encabezado, g.del_manifiesto ? `llevás ${cajasEnMesa}` : `escaneadas ${cajasEnMesa}`,
                     `medidas ${medidas}`, `faltan ${faltan.length}`]
     if (g.parcial_autorizado) {
@@ -705,7 +705,7 @@ export default class extends conEnterAvanza(Controller) {
 
   _pintarMesa() {
     const n = this._mesa.length
-    this.mesaTituloTarget.textContent = `${n} ${n === 1 ? "caja escaneada" : "cajas escaneadas"}`
+    this.mesaTituloTarget.textContent = `${n} ${n === 1 ? "paquete escaneado" : "paquetes escaneados"}`
     this.mesaTarget.replaceChildren(...this._mesa.map((p, i) => this._filaMesa(p, i)))
   }
 
@@ -715,7 +715,7 @@ export default class extends conEnterAvanza(Controller) {
     nodo.querySelector("[data-campo=orden]").textContent = i + 1
     nodo.querySelector("[data-campo=wr]").textContent = p.codigo || p.tracking
     nodo.querySelector("[data-campo=detalle]").textContent =
-      [p.tipo_envio, p.caja && `caja ${p.caja}`,
+      [p.tipo_envio, p.caja && `paquete ${p.caja}`,
        p.salto_manifiesto && "SIN MANIFIESTO", p.descripcion].filter(Boolean).join(" · ")
     return nodo
   }
@@ -838,7 +838,7 @@ export default class extends conEnterAvanza(Controller) {
     // bloqueo viejo puesto: *"aquí es donde ya me dejaste amarrado, porque no
     // puedo meterle otra vez escaneas"*.
     if (this._mesa.length === 0) {
-      this._problema("No hay cajas escaneadas", "Escaneá primero las cajas de la tanda, y después sacá los volúmenes.")
+      this._problema("No hay paquetes escaneados", "Escaneá primero los paquetes de la tanda, y después sacá los volúmenes.")
       return
     }
     if (this._volumenes.length >= this.maximoValue) {
@@ -880,7 +880,7 @@ export default class extends conEnterAvanza(Controller) {
     if (this._modalAbierto()) return
 
     if (this._mesa.length === 0) {
-      this._problema("No hay nada que guardar", "Escaneá las cajas de la tanda y poné el peso.")
+      this._problema("No hay nada que guardar", "Escaneá los paquetes de la tanda y poné el peso.")
       return
     }
     // Lo que quedó en el formulario entra como el último volumen: Yusef no
@@ -1044,7 +1044,7 @@ export default class extends conEnterAvanza(Controller) {
     if (!pendiente.aqui) nodo.classList.add("opacity-60")
 
     nodo.querySelector("[data-campo=wr]").textContent =
-      [pendiente.wr, pendiente.caja && `caja ${pendiente.caja}`].filter(Boolean).join(" · ")
+      [pendiente.wr, pendiente.caja && `paquete ${pendiente.caja}`].filter(Boolean).join(" · ")
     nodo.querySelector("[data-campo=cliente]").textContent = pendiente.cliente || ""
     const donde = nodo.querySelector("[data-campo=donde]")
     donde.textContent = pendiente.donde
@@ -1124,8 +1124,9 @@ export default class extends conEnterAvanza(Controller) {
     if (forzable) {
       const faltan = grupo.cajas.filter((c) => c.estado !== "medida")
       this.bannerFaltanTarget.textContent =
-        `Faltan ${faltan.length} ${faltan.length === 1 ? "caja" : "cajas"} de ${grupo.numero} para que salga a pre-factura: ` +
-        faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ") + "."
+        `Faltan ${faltan.length} ${faltan.length === 1 ? "paquete" : "paquetes"} de ${grupo.numero}: ` +
+        faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ") +
+        ". En pre-factura se guarda consolidando (F8) hasta que llegue lo que falta."
     }
 
     this._imprimir(url, cantidad)

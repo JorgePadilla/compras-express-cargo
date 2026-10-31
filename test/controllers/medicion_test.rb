@@ -327,8 +327,8 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_equal cajas.first.id, json["paquete"]["id"], "se mide la primera sin medir"
     assert_equal 3, json["grupo"]["total"]
     assert_equal cajas.map(&:id), json["grupo"]["cajas"].map { |c| c["id"] }
-    assert_match(/3 cajas con este warehouse receipt/, json["mensaje"])
-    assert_match(/vas por la 1 de 3/, json["mensaje"])
+    assert_match(/3 paquetes con este warehouse receipt/, json["mensaje"])
+    assert_match(/vas por el 1 de 3/, json["mensaje"])
   end
 
   test "con la primera medida, el mismo warehouse receipt trae la segunda" do
@@ -339,7 +339,7 @@ class MedicionTest < ActionDispatch::IntegrationTest
 
     assert_equal cajas.second.id, json["paquete"]["id"]
     assert_equal "medida", json["grupo"]["cajas"].first["estado"]
-    assert_match(/vas por la 2 de 3/, json["mensaje"])
+    assert_match(/vas por el 2 de 3/, json["mensaje"])
   end
 
   test "cada cuadrito dice de qué envío es, para poder encadenar las cajas" do

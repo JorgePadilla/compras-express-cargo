@@ -67,7 +67,7 @@
              data-action="keydown->auditar-pre-factura#teclado paste->auditar-pre-factura#pegado"
              class="block w-full min-h-12 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        Primero el QR de cualquier volumen: trae la tanda entera. Después la etiqueta de Miami de cada caja.
+        Primero el QR de cualquier volumen: trae la tanda entera. Después la etiqueta de Miami de cada paquete.
       </p>
       <div data-auditar-pre-factura-target="aviso" data-controller="anuncia-cambios" class="hidden mt-4 rounded-lg p-4 text-base"></div>
       <ol data-auditar-pre-factura-target="bitacora" class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-300"></ol>
@@ -102,7 +102,7 @@
 
         <p class="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="resumen"></p>
 
-        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cajas</h3>
+        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Paquetes</h3>
         <ul class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2" data-auditar-pre-factura-target="cajas"></ul>
 
         <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Volúmenes</h3>
@@ -137,7 +137,7 @@
           style="margin: auto"
           class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
           aria-labelledby="auditar-pre-factura-dialogo-1-titulo">
-    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-1-titulo", tono: :listo, tamano: :grande, kicker: "Están todas las cajas",
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-1-titulo", tono: :listo, tamano: :grande, kicker: "Están todos los paquetes",
           titulo: "¿Desea agregar algo más a esta pre-factura?") %>
     <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
       <p data-auditar-pre-factura-target="finTexto"></p>

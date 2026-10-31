@@ -68,7 +68,7 @@
       tamaño de dedo (PR-C29.11). Jorge, 2026-10-09: *"el botón de sonido va
       mejor debajo del sol en mediciones"*. %>
   <% content_for :esquina, render("shared/sonido_config", tactil: true) %>
-  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") %>
+  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todos los paquetes de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") %>
 
   <%# PR-C29.10 · Dos columnas: a la izquierda se escanea, a la derecha se
       mide. Es el orden del trabajo desde C28-08 —primero la pistola, después
@@ -116,7 +116,7 @@
                 **se queda acá** después de un escaneo bueno. La ayuda es una
                 línea y no tres: Yusef, *"no lo van a leer, no van a ver bien"*.
                 Después de guardar, acá se escribe el resultado. %>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso" data-controller="anuncia-cambios">Escaneá una por una todas las cajas de la tanda.</p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso" data-controller="anuncia-cambios">Escaneá uno por uno todos los paquetes de la tanda.</p>
           </div>
 
           <%# ── b…e · la tanda: aparece con la primera caja ─────────────── %>
@@ -166,7 +166,7 @@
                 <p hidden class="mt-2 rounded-xl bg-cec-teal px-6 py-3 text-center text-4xl font-bold tracking-wide text-cec-navy-dark"
                    data-medicion-target="tandaCompleto">COMPLETADO</p>
                 <p class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
-                <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Las cajas del envío" data-medicion-target="tandaCajas"></ul>
+                <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Los paquetes del envío" data-medicion-target="tandaCajas"></ul>
                 <%# Solo las que no están acá: ésas hay que ir a buscar o
                     reclamar. Las «acá, sin medir» ya se ven en el dibujo. %>
                 <p hidden class="mt-2 text-sm text-amber-800 dark:text-amber-400" data-medicion-target="tandaAusentes"></p>
@@ -192,7 +192,7 @@
                 es eso de la mesa"*. %>
             <div>
               <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                <span data-medicion-target="mesaTitulo">0 cajas escaneadas</span>
+                <span data-medicion-target="mesaTitulo">0 paquetes escaneados</span>
               </h4>
               <ul class="space-y-2" data-medicion-target="mesa"></ul>
 
@@ -213,7 +213,7 @@
                     <p class="font-mono text-base font-bold text-cec-navy dark:text-cec-gold" data-campo="wr"></p>
                     <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="detalle"></p>
                   </div>
-                  <%= render(ButtonComponent.new(variant: :soft_danger, size: :lg, icon: "x-mark", label: "Quitar esta caja de la tanda",
+                  <%= render(ButtonComponent.new(variant: :soft_danger, size: :lg, icon: "x-mark", label: "Quitar este paquete de la tanda",
                         data: { action: "medicion#quitarCaja" }, class: "shrink-0 min-h-12 min-w-12")) %>
                 </li>
               </template>
@@ -270,7 +270,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
         <div class="px-6 py-10 text-center" data-medicion-target="medirVacio">
           <p class="text-lg font-semibold text-gray-700 dark:text-gray-200">Acá se pesa y se mide</p>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Escaneá primero todas las cajas de la tanda.</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Escaneá primero todos los paquetes de la tanda.</p>
         </div>
 
         <div hidden data-medicion-target="medir">
@@ -581,13 +581,13 @@
       </div>
       <%# C31-12 · Sin «con tu nombre»: Yusef, *"van a creer que el paquete va a
           pasar al nombre de [quien mide]"*. Quién fue se sigue registrando. %>
-      <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá. Queda registrada la hora.</p>
+      <p class="text-sm text-gray-500">El paquete **no** cambia de estado: solo deja de esperarse acá. Queda registrada la hora.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="descarteError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
       <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar",
             data: { action: "medicion#cerrarDescarte" })) { "Cancelar" } %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sacar esta caja de la lista",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sacar este paquete de la lista",
             data: { medicion_target: "confirmarDescarte", action: "medicion#confirmarDescarte" })) { "Sacar de la lista" } %>
     </div>
   </dialog>
@@ -606,7 +606,7 @@
     <%= render ModalHeaderComponent.new(titulo_id: "medicion-dialogo-4-titulo", tono: :atencion, tamano: :grande, kicker: "El grupo está incompleto",
           titulo: "Medir lo que hay", titulo_data: { medicion_target: "excepcionTitulo" }) %>
     <div class="bg-white px-8 py-6 space-y-4">
-      <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
+      <p class="text-xl text-gray-900">Se va a seguir sin estos paquetes:</p>
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
       <p class="text-base text-gray-600">La pre-factura va a quedar <strong>abierta</strong>, esperando lo que falta: nadie le cobra al cliente con esto.</p>
       <p class="text-base text-gray-600">Queda anotado en la pre-alerta lo que faltaba y la hora.</p>
@@ -635,7 +635,7 @@
   <dialog data-medicion-target="autorizarModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70"
           aria-labelledby="medicion-dialogo-5-titulo">
-    <%= render ModalHeaderComponent.new(titulo_id: "medicion-dialogo-5-titulo", tono: :bloqueo, tamano: :grande, kicker: "Faltan cajas que sí vinieron",
+    <%= render ModalHeaderComponent.new(titulo_id: "medicion-dialogo-5-titulo", tono: :bloqueo, tamano: :grande, kicker: "Faltan paquetes que sí vinieron",
           titulo: "Mandalas a buscar, o que autorice un supervisor") %>
     <div class="bg-white px-8 py-6 space-y-4">
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="autorizarFaltantes"></ul>
@@ -665,9 +665,9 @@
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="autorizarError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar y mandar a buscar las cajas",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar y mandar a buscar los paquetes",
             data: { action: "medicion#cerrarAutorizacion" })) { "Cancelar" } %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar y guardar sin esas cajas",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar y guardar sin esos paquetes",
             data: { medicion_target: "confirmarAutorizacion", action: "medicion#confirmarAutorizacion" })) { "Autorizar y guardar" } %>
     </div>
   </dialog>
@@ -690,10 +690,10 @@
           titulo_data: { medicion_target: "mezclaTitulo" }) %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="mezclaTexto"></p>
-      <p class="text-base text-gray-600">Esta caja <strong>no</strong> entró a la tanda. ¿Qué hacemos?</p>
+      <p class="text-base text-gray-600">Este paquete <strong>no</strong> entró a la tanda. ¿Qué hacemos?</p>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Empezar todo de nuevo, sin ninguna caja escaneada",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Empezar todo de nuevo, sin ningún paquete escaneado",
             data: { action: "medicion#mezclaEmpezarDeNuevo" })) { "Empezar todo de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Quitar el último escaneado y seguir",
             data: { medicion_target: "mezclaQuitar", action: "medicion#mezclaQuitarUltimo" })) { "Quitar el último escaneado" } %>
@@ -712,17 +712,17 @@
           style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70"
           aria-labelledby="medicion-dialogo-7-titulo">
     <%= render ModalHeaderComponent.new(titulo_id: "medicion-dialogo-7-titulo", tono: :atencion, tamano: :grande, kicker: "No está en ninguna pre-alerta",
-          titulo: "¿La agregás a este consolidado?") %>
+          titulo: "¿Lo agregás a este consolidado?") %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="unirTexto"></p>
       <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="unirPreAlerta"></p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="unirError"></p>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Sigo sin ella y la dejo de lado",
-            data: { action: "medicion#unirNo" })) { "Sigo sin ella, la dejo de lado" } %>
-      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Agregarla a este consolidado",
-            data: { medicion_target: "unirSi", action: "medicion#unirSi" })) { "Agregarla a este consolidado" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Sigo sin él y lo dejo de lado",
+            data: { action: "medicion#unirNo" })) { "Sigo sin él, lo dejo de lado" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Agregarlo a este consolidado",
+            data: { medicion_target: "unirSi", action: "medicion#unirSi" })) { "Agregarlo a este consolidado" } %>
     </div>
   </dialog>
 
@@ -769,10 +769,10 @@
       <ul class="text-lg font-mono text-cec-navy space-y-1" data-medicion-target="yaMedidoLista"></ul>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Dejarla de lado",
-            data: { action: "medicion#yaMedidoDejar" })) { "Dejarla de lado" } %>
-      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medirla sola",
-            data: { action: "medicion#yaMedidoSola" })) { "Medirla sola" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Dejarlo de lado",
+            data: { action: "medicion#yaMedidoDejar" })) { "Dejarlo de lado" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medirlo solo",
+            data: { action: "medicion#yaMedidoSola" })) { "Medirlo solo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Medir de nuevo todo junto",
             data: { medicion_target: "yaMedidoJunto", action: "medicion#yaMedidoJunto" }, hidden: true)) { "Medir de nuevo todo junto" } %>
     </div>
@@ -808,7 +808,7 @@
           la de la mesa es el consolidado y la que entra es suelta, «hago el
           consolidado» vaciaba la mesa y arrancaba con la suelta: le borraba
           al operario lo que estaba haciendo. Ahí queda «lo dejo de lado». %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Hago el consolidado: empiezo de nuevo con esta caja",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Hago el consolidado: empiezo de nuevo con este paquete",
             data: { medicion_target: "hacerConsolidado", action: "medicion#hacerConsolidado" })) { "Hago el consolidado" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Lo dejo de lado y sigo con lo que tengo",
             data: { action: "medicion#dejarDeLado" })) { "Lo dejo de lado" } %>

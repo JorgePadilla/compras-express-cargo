@@ -56,7 +56,7 @@ class AuditoriaDeTanda
     bultos = sesion.present? ? Bulto.de_la_sesion(sesion).to_a : []
     if caja.medido_at.blank? || bultos.empty?
       return Resultado.new(tipo: :sin_medir,
-                           mensaje: "#{codigo_de(caja)} todavía no está medida: medila primero en Medición.")
+                           mensaje: "#{codigo_de(caja)} todavía no está medido: medilo primero en Medición.")
     end
 
     cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
@@ -66,7 +66,7 @@ class AuditoriaDeTanda
     avisos = [ medicion_anterior(codigo, bultos), prepagadas_aviso(cajas) ].compact
     Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: avisos.join(" · ").presence,
                   grupo_aviso: grupo_aviso(cajas, sesion),
-                  mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} caja#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
+                  mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} paquete#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
   end
 
   # Después de medir de nuevo (`C30-11`), la etiqueta **vieja** de un volumen
@@ -91,7 +91,7 @@ class AuditoriaDeTanda
     return nil if n.zero?
 
     simbolico = format("%.2f", PreFactura::PREPAGADO_MIAMI_SIMBOLICO)
-    "#{n} caja#{"s" if n != 1} prepagada#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
+    "#{n} paquete#{"s" if n != 1} prepagado#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
   end
 
   # C34-07 · El grupo al que le falta carga ya no frena: se dice qué falta y
@@ -129,7 +129,7 @@ class AuditoriaDeTanda
     end
 
     if Array(escaneadas).map(&:to_i).include?(caja.id)
-      return Resultado.new(tipo: :ya_escaneada, caja: caja, mensaje: "#{codigo_de(caja)} ya la escaneaste.")
+      return Resultado.new(tipo: :ya_escaneada, caja: caja, mensaje: "#{codigo_de(caja)} ya lo escaneaste.")
     end
 
     Resultado.new(tipo: :pertenece, caja: caja, mensaje: "#{codigo_de(caja)} pertenece.")
