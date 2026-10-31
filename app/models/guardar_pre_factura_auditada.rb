@@ -52,6 +52,11 @@
 class GuardarPreFacturaAuditada
   class NoSePuede < StandardError; end
 
+  # C34-07 · Lista 14 · F9 con un grupo al que le falta carga no se traba:
+  # pregunta. Yusef: *"tiene sentido… está muy bueno… ¿está seguro que desea
+  # notificarlo?"*. La pantalla vuelve a mandar el F9 con `confirmado`.
+  class NecesitaConfirmacion < NoSePuede; end
+
   # Cuántas veces se reintenta si el número de pre-factura chocó con el de
   # otro guardado simultáneo (de **otra** tanda: la misma ya la frena el
   # candado). `generate_numero` es máximo + 1, y dos que lo calculan a la vez
@@ -62,8 +67,10 @@ class GuardarPreFacturaAuditada
 
   # C31-17 · `etiquetas`: cuántas de entrega pidió el operario al F9/F8 (una
   # por bolsa). Sin ella se queda la que tenía la pre-factura.
-  def initialize(hoja:, sesiones:, escaneadas:, user:, modo: :avisar, pre_factura_id: nil, etiquetas: nil)
+  def initialize(hoja:, sesiones:, escaneadas:, user:, modo: :avisar, pre_factura_id: nil, etiquetas: nil,
+                 confirmado: false)
     @hoja = hoja
+    @confirmado = ActiveModel::Type::Boolean.new.cast(confirmado) || false
     @etiquetas = etiquetas.to_i.clamp(1, PreFactura::ETIQUETAS_MAX) if etiquetas.present?
     @sesiones = Array(sesiones).map(&:to_s).compact_blank.uniq
     @escaneadas = Array(escaneadas).map(&:to_i).to_set
@@ -205,6 +212,22 @@ class GuardarPreFacturaAuditada
       raise NoSePuede, "#{trabadas.map { |c| codigo(c) }.join(', ')} tiene una tarea pendiente que bloquea: " \
                        "cerrala antes, o el aviso no sale a la hora."
     end
+
+    preguntar_por_lo_que_falta!(cajas)
+  end
+
+  # C34-07 · Se mira **todo**, las tandas viejas de la reabierta también: el
+  # F9 que cierra un consolidado es el que tiene que saber si llegó todo. F8 no
+  # pregunta —es justamente para esperar lo que falta—, y un grupo con «facturar
+  # lo que hay» sellado (el PIN de medición, `MedirBulto`) tampoco.
+  def preguntar_por_lo_que_falta!(cajas)
+    return if @confirmado
+
+    pendientes = AuditoriaDeTanda.grupos_pendientes(cajas)
+    return if pendientes.empty?
+
+    raise NecesitaConfirmacion,
+          pendientes.map { |g| "#{g.nombre} no está completo: #{g.lo_que_falta}." }.join(" ")
   end
 
   # PR-P.11a · El manifiesto de la pre-factura es el **oficial** de sus cajas:

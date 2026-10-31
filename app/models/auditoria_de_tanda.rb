@@ -18,7 +18,8 @@
 # cajas se escanearon y la manda en cada pedido: no hay estado en el servidor
 # entre un escaneo y el siguiente.
 class AuditoriaDeTanda
-  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, keyword_init: true) do
+  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, :grupo_aviso,
+                         keyword_init: true) do
     def ok? = tipo.in?(%i[ok pertenece])
   end
 
@@ -64,6 +65,7 @@ class AuditoriaDeTanda
 
     avisos = [ medicion_anterior(codigo, bultos), prepagadas_aviso(cajas) ].compact
     Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: avisos.join(" · ").presence,
+                  grupo_aviso: grupo_aviso(cajas, sesion),
                   mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} caja#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
   end
 
@@ -90,6 +92,24 @@ class AuditoriaDeTanda
 
     simbolico = format("%.2f", PreFactura::PREPAGADO_MIAMI_SIMBOLICO)
     "#{n} caja#{"s" if n != 1} prepagada#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
+  end
+
+  # C34-07 · El grupo al que le falta carga ya no frena: se dice qué falta y
+  # dónde está, y el auditor elige. F8 guarda consolidando —*"cliente inicia el
+  # consolidado"*— y F9 pregunta antes de avisar. Una clave aparte de `aviso`:
+  # aquella suena como «etiqueta vieja», y esto no es un error.
+  def grupo_aviso(cajas, sesion)
+    pendientes = self.class.grupos_pendientes(cajas)
+    return nil if pendientes.empty?
+
+    en_pantalla = @sesiones + [ sesion.to_s ]
+    pendientes.map { |g| "#{g.nombre} no está completo: #{g.lo_que_falta(en_pantalla: en_pantalla)}." }
+              .join(" ") + " F8 lo guarda consolidando; F9 pregunta antes de avisar."
+  end
+
+  # Los grupos de estas cajas a los que les falta algo, uno por grupo.
+  def self.grupos_pendientes(cajas)
+    cajas.filter_map(&:grupo_pendiente).uniq(&:clave)
   end
 
   # ── Una caja (la etiqueta de Miami) ─────────────────────────────────────
@@ -134,10 +154,12 @@ class AuditoriaDeTanda
                            mensaje: "#{codigo_de(con_pf)} ya está en la pre-factura #{pf&.numero}.")
     end
 
-    if (sin_listo = cajas.find { |c| !c.listo_para_prefactura? })
-      return Resultado.new(tipo: :grupo_incompleto,
-                           mensaje: "#{codigo_de(sin_listo)} es de un grupo que todavía no está completo: " \
-                                    "falta medir lo demás, o que un supervisor autorice facturar lo que hay.")
+    # C34-07 · Lo que traba es **no estar medido**. El grupo incompleto dejó
+    # de trabar acá (`grupo_aviso`): antes, la primera tanda de un consolidado
+    # no llegaba nunca a crear la pre-factura que F8 después reabre.
+    if (sin_medir = cajas.find { |c| c.medido_at.blank? })
+      return Resultado.new(tipo: :sin_medir,
+                           mensaje: "#{codigo_de(sin_medir)} todavía no está medido: medilo primero en Medición.")
     end
 
     # El servicio tiene que ser uno de los de la hoja.

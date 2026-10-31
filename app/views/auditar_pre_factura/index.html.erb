@@ -28,6 +28,8 @@
      data-action="auditar-pre-factura:ok->audio#success
                   auditar-pre-factura:consolidando->audio#notify
                   auditar-pre-factura:medicionAnterior->audio#alert
+                  auditar-pre-factura:grupoIncompleto->audio#notify
+                  auditar-pre-factura:preguntaNotificar->audio#alert
                   auditar-pre-factura:pertenece->audio#success
                   auditar-pre-factura:completo->audio#completo
                   auditar-pre-factura:yaEscaneada->audio#notify
@@ -185,6 +187,31 @@
             data: { action: "auditar-pre-factura#cerrarEtiquetas" }) do %>Cancelar<% end %>
       <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "printer",
             data: { action: "auditar-pre-factura#confirmarEtiquetas" }) do %>Imprimir<% end %>
+    </div>
+  </dialog>
+
+  <%# ── C34-07 · Lista 14 · «¿Está seguro que desea notificarlo?» ──
+      F9 con un consolidado (o un split) al que le falta carga. Yusef, en la
+      lista del personal: *"tiene sentido… está muy bueno"*; F8 guarda
+      consolidando, F9 es que ya terminó, y si queda uno en tránsito se
+      pregunta. Antes era un bloqueo. El foco va al «Sí»: el que apretó F9
+      ya dijo que quería avisar, y F9 otra vez también confirma. %>
+  <dialog data-auditar-pre-factura-target="preguntaModal"
+          data-action="cancel->auditar-pre-factura#preguntaNo"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="auditar-pre-factura-dialogo-3-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-3-titulo", tono: :atencion, tamano: :grande,
+          kicker: "Falta carga del consolidado", titulo: "¿Está seguro que desea notificarlo?") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
+      <p data-auditar-pre-factura-target="preguntaTexto"></p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Si todavía se espera, cancelá y guardá con F8: queda consolidando, sin avisar.</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render ButtonComponent.new(variant: :secondary, size: :lg,
+            data: { action: "auditar-pre-factura#preguntaNo" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "printer",
+            data: { auditar_pre_factura_target: "preguntaSi", action: "auditar-pre-factura#preguntaSi" }) do %>Sí, notificar<% end %>
     </div>
   </dialog>
 </div>

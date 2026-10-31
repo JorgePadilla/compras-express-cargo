@@ -145,6 +145,36 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_equal "en_aduana", nueva.reload.estado
   end
 
+  # C34-07 · Lista 14 · El consolidado al que le falta uno: el volumen entra
+  # con el aviso, y F9 pregunta antes de avisar. Antes salía «es de un grupo
+  # que todavía no está completo» y no se podía ni empezar.
+  test "consolidado incompleto: se audita con el aviso y F9 pregunta «¿está seguro?»" do
+    pa = PreAlerta.create!(numero_documento: "PA-SYS#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: @cer, consolidado: true, con_reempaque: true, estado: "pre_alerta",
+                           titulo: "Consolidado", creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    %w[1ZSYSCONS000001 1ZSYSCONS000002].each { |t| pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Bulto", fecha: Date.current) }
+    una = pa.pre_alerta_paquetes.order(:id).first.paquete
+    una.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
+    una.reload.update!(estado: "en_aduana", manifiesto: @manifiesto, peso: 2)
+    MedirBulto.new(user: @user).guardar!(paquete_ids: [ una.id ], volumenes: [ { peso: "2" } ])
+
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+    escanear "MED #{una.reload.tracking} 2.00"
+    assert_text "#{pa.numero_documento} no está completo: falta 1 que no ha llegado a Miami", wait: 5
+    escanear una.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    page.driver.browser.action.send_keys(:f9).perform
+    find("[data-auditar-pre-factura-target='etiquetasModal'][open]", wait: 5)
+    page.driver.browser.action.send_keys(:enter).perform
+    assert_selector "[data-auditar-pre-factura-target='preguntaModal'][open]", text: "¿Está seguro que desea notificarlo?", wait: 5
+    assert_not PreFactura.where(auditado_por: @user).exists?, "la pregunta no guarda"
+
+    window_opened_by { click_on "Sí, notificar" }
+    hasta_que("el «Sí» no guardó") { PreFactura.where(auditado_por: @user).where.not(notificar_at: nil).exists? }
+    assert_equal PreFactura.where(auditado_por: @user).last.id, una.reload.pre_factura_id
+  end
+
   # C31-17 · *"Cuántas etiquetas el F9"*: se cambia el número, sale con eso
   # —una por bolsa, «i de N»— y queda guardado para reimprimir.
   test "F9 pregunta cuántas etiquetas: se cambia a 3 y salen 3" do

@@ -43,6 +43,8 @@ class AuditarPreFacturaController < ApplicationController
       imprimir_url: imprimir_url(pre_factura),
       mensaje: "Pre-factura #{pre_factura.numero} guardada. " + cuando_avisa(pre_factura)
     }
+  rescue GuardarPreFacturaAuditada::NecesitaConfirmacion => e
+    render json: { ok: false, necesita_confirmacion: true, mensaje: e.message }, status: :unprocessable_entity
   rescue GuardarPreFacturaAuditada::NoSePuede => e
     render json: { ok: false, mensaje: e.message }, status: :unprocessable_entity
   # PR-P.8 · La red de abajo. Dos F9 a la vez ya no llegan acá —el candado de
@@ -103,7 +105,8 @@ class AuditarPreFacturaController < ApplicationController
   def guardador(modo, con: sesiones)
     GuardarPreFacturaAuditada.new(hoja: @hoja, sesiones: con, escaneadas: Array(params[:escaneadas]),
                                   user: Current.user, modo: modo.presence || :avisar,
-                                  pre_factura_id: abierta&.id, etiquetas: params[:etiquetas].presence)
+                                  pre_factura_id: abierta&.id, etiquetas: params[:etiquetas].presence,
+                                  confirmado: params[:confirmado])
   end
 
   def cuando_avisa(pre_factura)
@@ -144,7 +147,8 @@ class AuditarPreFacturaController < ApplicationController
   # guardar nada—.
   def tanda_json(resultado)
     datos_de_tanda(resultado.sesion, resultado.bultos, resultado.cajas)
-      .merge(aviso_ndem: resultado.aviso, lineas: vista_previa(sesiones + [ resultado.sesion ]))
+      .merge(aviso_ndem: resultado.aviso, grupo_aviso: resultado.grupo_aviso,
+             lineas: vista_previa(sesiones + [ resultado.sesion ]))
   end
 
   def datos_de_tanda(sesion, bultos, cajas)

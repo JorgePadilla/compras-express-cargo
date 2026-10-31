@@ -97,12 +97,14 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal pf, r.pre_factura
   end
 
-  test "un grupo que todavía no está completo no se pre-factura" do
+  # C34-07 · Lo que traba es una caja sin medir. El grupo incompleto ya no
+  # traba: lo cuenta `consolidado_arranca_con_f8_test.rb`.
+  test "una caja de la tanda sin medir no se pre-factura" do
     cajas = 2.times.map { caja }
     medir(cajas, { peso: "2" })
     cajas.last.update_columns(medido_at: nil)
 
-    assert_equal :grupo_incompleto, auditoria.volumen(qr(cajas.first)).tipo
+    assert_equal :sin_medir, auditoria.volumen(qr(cajas.first)).tipo
   end
 
   # C31-14 · Cierra `RP-85`. Yusef: *"todo debe dejarte meter de otros

@@ -1021,17 +1021,25 @@ class Paquete < ApplicationRecord
     GrupoDeUnion.de(self)
   end
 
-  # C26-03 · El gancho para la pre-factura, que **todavía no lo lee** (es su
-  # bloque, `C26-08`): medido, y sin grupo, o con el grupo completo, cerrado
-  # (se factura aparte) o con la excepción de «facturar lo que hay» sellada.
+  # C26-03 · Medido, y sin grupo, o con el grupo completo, cerrado (se
+  # factura aparte) o con la excepción de «facturar lo que hay» sellada.
   #
   # «Grupo» incluye el split: media caja de un tracking partido no se factura
   # sin la otra mitad medida.
   def listo_para_prefactura?
-    return false if medido_at.blank?
+    medido_at.present? && grupo_pendiente.nil?
+  end
 
+  # C34-07 · El grupo al que todavía le falta carga, o nil. Ya no es un
+  # bloqueo: Yusef, viendo el «grupo que todavía no está completo» en la
+  # pasada del 2026-10-30, *"aquí no debería ser bloqueado… porque estamos
+  # empezando a hacerle el consolidado"*. F8 arranca el consolidado con lo que
+  # hay, y F9 **pregunta** antes de avisar (`GuardarPreFacturaAuditada`).
+  def grupo_pendiente
     grupo = grupo_de_union
-    grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+    return nil if grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+
+    grupo
   end
 
   def numero_recepcion_visible

@@ -37,7 +37,8 @@ export default class extends Controller {
     "vacio", "contenido", "clienteCodigo", "clienteNombre", "servicio", "resumen",
     "cajas", "volumenes", "lineas",
     "finModal", "finTexto", "finGuardar", "finSeguir", "abierta",
-    "etiquetasModal", "etiquetasInput"
+    "etiquetasModal", "etiquetasInput",
+    "preguntaModal", "preguntaTexto", "preguntaSi"
   ]
   static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String, abrir: Object }
 
@@ -102,6 +103,17 @@ export default class extends Controller {
   }
 
   teclaGlobal(e) {
+    // C34-07 · Con «¿Está seguro que desea notificarlo?» abierto, F9 dice que
+    // sí —es la misma tecla que lo trajo— y ninguna otra hace nada.
+    if (this.preguntaModalTarget.open) {
+      if (e.key === "F9") {
+        e.preventDefault()
+        this.preguntaSi()
+      } else if (e.key === "F2" || e.key === "F8") {
+        e.preventDefault()
+      }
+      return
+    }
     // C31-17 · Con «¿Cuántas etiquetas?» abierto, un F9 o F8 más imprime con
     // el número que está —el que pide el modal— y F2 no limpia nada.
     if (this.etiquetasModalTarget.open) {
@@ -140,14 +152,18 @@ export default class extends Controller {
           this._agregarTanda(data)
           this._anotar(`Volumen · ${data.resumen}`)
           // La etiqueta es de una medición anterior: se avisa con otro sonido,
-          // y la tanda de hoy queda cargada igual.
+          // y la tanda de hoy queda cargada igual. C34-07 · Al grupo que le
+          // falta carga también se lo dice, con su sonido: no traba.
+          const avisos = [ data.aviso_ndem, data.grupo_aviso ].filter(Boolean)
           if (data.aviso_ndem) {
             this.dispatch("medicionAnterior")
-            this._avisar("alerta", data.aviso_ndem)
+          } else if (data.grupo_aviso) {
+            this.dispatch("grupoIncompleto")
           } else {
             this.dispatch("ok")
-            this._avisar("ok", data.mensaje)
           }
+          if (avisos.length) this._avisar("alerta", avisos.join(" · "))
+          else this._avisar("ok", data.mensaje)
         } else {
           this.dispatch("rechazo")
           this._avisar("error", data.mensaje, data.pre_factura_url)
@@ -294,7 +310,7 @@ export default class extends Controller {
     enfocar(this.codigoTarget)
   }
 
-  _guardar(modo, etiquetas) {
+  _guardar(modo, etiquetas, confirmado = false) {
     if (this._guardando) return
 
     // La pestaña de la etiqueta se abre **acá**, en el gesto (la tecla o el
@@ -310,7 +326,8 @@ export default class extends Controller {
     // pistola lea mientras se guarda espera a que la pantalla quede limpia —si
     // no, una lectura en vuelo se mezclaría con la pre-factura que se cierra.
     this._cola = this._cola.then(() => this._post(this.guardarUrlValue, {
-      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas
+      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas,
+      confirmado
     })
       .then((data) => {
         if (data.ok) {
@@ -320,6 +337,12 @@ export default class extends Controller {
           this._pintar()
           this._avisar("ok", data.mensaje, data.pre_factura_url)
           this._anotar(`Guardada ${data.numero}`)
+        } else if (data.necesita_confirmacion) {
+          // C34-07 · Lista 14 · Falta carga del grupo: no es un error, es una
+          // pregunta. La pestaña se cierra; el «Sí» es un gesto nuevo y abre
+          // la suya.
+          ventana?.close()
+          this._preguntar(modo, etiquetas, data.mensaje)
         } else {
           ventana?.close()
           this.dispatch("noGuardo")
@@ -335,6 +358,32 @@ export default class extends Controller {
         this._guardando = false
         enfocar(this.codigoTarget)
       }))
+  }
+
+  // ── C34-07 · «¿Está seguro que desea notificarlo?» ───────────────────────
+
+  _preguntar(modo, etiquetas, mensaje) {
+    this._pregunta = { modo, etiquetas }
+    this.preguntaTextoTarget.textContent = mensaje
+    this.dispatch("preguntaNotificar")
+    this.preguntaModalTarget.showModal()
+    requestAnimationFrame(() => this.preguntaSiTarget.focus())
+  }
+
+  // Sí: el mismo F9, con la respuesta. Todavía adentro del gesto.
+  preguntaSi() {
+    const p = this._pregunta
+    this.preguntaModalTarget.close()
+    this._pregunta = null
+    if (p) this._guardar(p.modo, p.etiquetas, true)
+  }
+
+  // No (o Escape): no se guarda nada; la tanda sigue en pantalla.
+  preguntaNo(e) {
+    if (e?.type === "cancel") e.preventDefault()
+    this.preguntaModalTarget.close()
+    this._pregunta = null
+    enfocar(this.codigoTarget)
   }
 
   limpiar() {
