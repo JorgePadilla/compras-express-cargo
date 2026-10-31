@@ -86,7 +86,7 @@ class RecibirManifiesto
     trabados = []
     CajaManifiesto.transaction do
       caja.update!(recibida_at: Time.current, recibida_por_id: @user&.id)
-      caja.paquetes.each do |paquete|
+      (caja.paquetes.to_a + hermanas_sin_caja(caja)).each do |paquete|
         # Se pregunta **antes**: un `update` que falla deja el estado nuevo
         # asignado en memoria, y después ya dice `en_aduana` sin estarlo.
         ya_estaba = paquete.en_aduana?
@@ -188,6 +188,21 @@ class RecibirManifiesto
   # la pantalla pueda decir cuántos son en vez de mostrar una tabla vacía.
   def paquetes_sin_caja
     @manifiesto.paquetes.where(caja_manifiesto_id: nil)
+  end
+
+  # C34-03 · Las cajas del mismo envío (el mismo warehouse receipt partido)
+  # que viajan **en este manifiesto sin caja**: las metió «empacar sin
+  # escanear» después de escanear la hermana. En la pasada del 2026-10-30:
+  # *"yo solo mandé uno, se quedó el dos, después le dije: meter todo lo que
+  # estaba… lo recibí en Honduras, no les cambió los datos"*. Sin caja, nada
+  # las movía hasta «Terminar», que pide PIN. Llegan con su hermana: se
+  # reciben con ella. Las de un split se encuentran por el número madre
+  # ([[project_split_agrupa_por_tracking]]).
+  def hermanas_sin_caja(caja)
+    madres = caja.paquetes.filter_map(&:numero_recepcion).uniq
+    return [] if madres.empty?
+
+    paquetes_sin_caja.where(numero_recepcion: madres).to_a
   end
 
   def recibidas = @manifiesto.cajas.where.not(recibida_at: nil).to_a

@@ -13713,6 +13713,18 @@ recibido en la sucursal de origen. Leyendo el código no se ve por qué la segun
 caja quedaría afuera. Hay que reproducirlo con un split. Ojo: en este repo, las
 cajas de un split se encuentran por tracking.
 
+▶ **2026-10-31 (`PR-C34.12`).** Reproducido con tests, y lo de Miami **no** era:
+«empacar sin escanear» sí toma la segunda caja de un split hecho al etiquetar,
+y si el split se hace después de escanear la primera, la nueva hereda su caja
+del manifiesto (`ajustar_split!`, a propósito desde `C30-06`). La causa estaba
+en **Honduras**: la que entró sin escanear viaja **sin caja**, y recibir la
+caja de su hermana no la movía. Se quedaba en `enviado_honduras` hasta
+«Terminar», que pide PIN, y mientras tanto medición y pre-factura no la veían.
+Es *"la causa es la misma"* de Jorge. Ahora, al recibir una caja, las cajas
+del mismo warehouse receipt que viajan en ese manifiesto sin caja pasan a
+aduana con ella. Lo suelto de otro envío sigue esperando «Terminar», como
+antes.
+
 #### C34-04 · Guías y aduana, y recibir carga (min 42–66)
 
 **La fecha probable, sin correo.** Son dos fechas. La del correo es la que sale
@@ -14146,7 +14158,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 |---|---|---|
 | `C34-01` | Reunión de una hora con el equipo, los martes a las 4 | 📄 Operativo |
 | `C34-02` | Manifiesto de Miami: «empacar sin escanear» abajo, «finalizar e imprimir» arriba, Enter en el confirm, pallets de Tegucigalpa, metas | ❌ Botones y confirm. ❓ `RP-110` pallets. Sacar/meter después de finalizado ya está (`C30-06`), falta probarlo |
-| `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ❓ A reproducir |
+| `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ✅ ▶ **2026-10-31** (`PR-C34.12`): reproducido; era la recepción en Honduras. La hermana sin caja ahora llega con la caja de su hermana |
 | `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
 | `C34-05` | El consolidado que se mide en partes: sumar al anterior | ✅ ▶ **2026-10-31** (`PR-C34.4`): medir de nuevo todo junto también después de F8; la consolidando se anula y queda un solo peso |
 | `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ✅ ▶ **2026-10-31** (`PR-C34.3`): contaba dos veces el medido que volvía a la mesa; ahora es el total menos lo que falta, y lo medido antes se ve |
