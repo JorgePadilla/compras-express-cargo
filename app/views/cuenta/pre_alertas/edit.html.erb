@@ -13,6 +13,17 @@
     <%= render "cuenta/pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
 
+  <%# C34-11 · La pre-alerta entera se anula mientras nada llegó a Miami. La
+      acción existía y no tenía link: quien tenía un solo renglón no tenía
+      cómo deshacerse de ella. %>
+  <% if puede_anular? %>
+    <div class="flex justify-end -mt-4 mb-4">
+      <%= render ButtonComponent.new(variant: :soft_danger, size: :sm, icon: "trash",
+            href: anular_cuenta_pre_alerta_path(@pre_alerta), method: :delete,
+            confirm: "¿Anular la pre-alerta #{@pre_alerta.numero_documento}? Sus paquetes dejan de esperarse.") do %>Anular pre-alerta<% end %>
+    </div>
+  <% end %>
+
   <div id="flash" data-controller="anuncia-cambios"></div>
 
   <% if @pre_alerta.consolidando? %>
