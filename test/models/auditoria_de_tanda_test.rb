@@ -44,7 +44,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal uno.sesion, r.sesion
     assert_equal [ uno, dos ], r.bultos
     assert_equal cajas.map(&:id).sort, r.cajas.map(&:id).sort
-    assert_match(/2 volúmenes · 3 cajas/, r.mensaje)
+    assert_match(/2 volúmenes · 3 paquetes/, r.mensaje)
   end
 
   # Después de medir de nuevo (C30-11): la etiqueta vieja sigue resolviendo a
@@ -82,7 +82,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     r = auditoria.volumen("MED #{sin_medir.tracking} 1.00")
 
     assert_equal :sin_medir, r.tipo
-    assert_match(/medila primero/, r.mensaje)
+    assert_match(/medilo primero/, r.mensaje)
   end
 
   test "ya está en una pre-factura: se dice cuál, para abrirla" do
@@ -128,7 +128,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
 
     r = auditoria.volumen("#{qr(cajas.first)}")
     assert_equal :ok, r.tipo
-    assert_match(/2 cajas prepagadas en Miami: se cobra el simbólico de US\$1\.00 c\/u/, r.aviso)
+    assert_match(/2 paquetes prepagados en Miami: se cobra el simbólico de US\$1\.00 c\/u/, r.aviso)
   end
 
   test "el aviso del prepago va junto con el de la etiqueta vieja" do
@@ -137,7 +137,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
 
     r = auditoria.volumen(qr(cajas.first)) # sin «n de m»: dice 1, la tanda tiene 2
     assert_match(/medición anterior/, r.aviso)
-    assert_match(/1 caja prepagada en Miami/, r.aviso)
+    assert_match(/1 paquete prepagado en Miami/, r.aviso)
   end
 
   test "una tanda que mezcla prepagadas y no prepagadas se rechaza: medila de nuevo" do

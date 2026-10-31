@@ -60,7 +60,7 @@ class MedirBulto
 
     reemplaza_sesion = reemplaza_sesion.presence
     if reemplaza_sesion && !Bulto.exists?(sesion: reemplaza_sesion)
-      raise NoSePuede, "La tanda que se quería corregir ya no existe. Escaneá la caja otra vez."
+      raise NoSePuede, "La tanda que se quería corregir ya no existe. Escaneá el paquete otra vez."
     end
     if reemplaza_sesion && (pf = Bulto.pre_factura_que_cobra(reemplaza_sesion))
       raise NoSePuede, "Esa tanda ya se cobra en la pre-factura #{pf.numero}: sus volúmenes no se pueden " \
@@ -137,7 +137,7 @@ class MedirBulto
   end
 
   def faltantes_msg(lista)
-    "Faltan #{lista.size} caja#{"s" if lista.size != 1} que sí vinieron: " \
+    "Faltan #{lista.size} paquete#{"s" if lista.size != 1} que sí vinieron: " \
       "#{lista.map { |c| codigo(c.paquete) }.join(', ')}. Mandalas a buscar, o que un supervisor ponga su código."
   end
 
@@ -173,11 +173,11 @@ class MedirBulto
   # operario cuál choca **con la primera**.
   def cajas_de(paquete_ids)
     ids = Array(paquete_ids).map(&:to_i).reject(&:zero?)
-    raise NoSePuede, "La tanda no tiene ninguna caja escaneada." if ids.empty?
+    raise NoSePuede, "La tanda no tiene ningún paquete escaneado." if ids.empty?
 
     repetida = ids.tally.find { |_id, veces| veces > 1 }&.first
     por_id = Paquete.where(id: ids.uniq).includes(:cliente, :tipo_envio, :proveedor, :sucursal).index_by(&:id)
-    raise NoSePuede, "Alguna de las cajas escaneadas ya no existe." if por_id.size != ids.uniq.size
+    raise NoSePuede, "Alguno de los paquetes escaneados ya no existe." if por_id.size != ids.uniq.size
     raise NoSePuede, repetida_msg(por_id[repetida]) if repetida
 
     ids.map { |id| por_id[id] }
@@ -269,7 +269,7 @@ class MedirBulto
   end
 
   def repetida_msg(caja)
-    "#{codigo(caja)} está escaneada dos veces en la tanda: una caja se mide una sola vez."
+    "#{codigo(caja)} está escaneado dos veces en la tanda: un paquete se mide una sola vez."
   end
 
   def codigo(caja)

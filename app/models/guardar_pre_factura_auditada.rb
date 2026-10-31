@@ -185,7 +185,7 @@ class GuardarPreFacturaAuditada
     de_las_nuevas = cajas.select { |c| nuevas.include?(c.medicion_sesion.to_s) }
     faltan = de_las_nuevas.reject { |c| @escaneadas.include?(c.id) }
     if faltan.any?
-      raise NoSePuede, "Faltan #{faltan.size} caja#{"s" if faltan.size != 1} por escanear: " \
+      raise NoSePuede, "Faltan #{faltan.size} paquete#{"s" if faltan.size != 1} por escanear: " \
                        "#{faltan.map { |c| codigo(c) }.join(', ')}."
     end
 

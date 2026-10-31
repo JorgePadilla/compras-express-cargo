@@ -31,7 +31,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
 
     escanear @qr
     assert_text @cliente.codigo, wait: 5
-    assert_text "1 volumen · 2 cajas · faltan 2"
+    assert_text "1 volumen · 2 paquetes · faltan 2"
 
     escanear @cajas.first.tracking
     assert_text "faltan 1", wait: 5
@@ -58,7 +58,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     preparar_la_hoja
 
     pegar @qr
-    assert_text "1 volumen · 2 cajas · faltan 2", wait: 5
+    assert_text "1 volumen · 2 paquetes · faltan 2", wait: 5
     assert_equal "", find("#codigo_auditoria").value
 
     pegar @cajas.first.tracking
@@ -100,7 +100,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     visit auditar_pre_factura_index_path
     escanear @qr
 
-    assert_text "2 cajas prepagadas en Miami: se cobra el simbólico de US$1.00 c/u", wait: 5
+    assert_text "2 paquetes prepagados en Miami: se cobra el simbólico de US$1.00 c/u", wait: 5
     assert_text "PREPAGADO EN MIAMI"
   end
 

@@ -13778,6 +13778,13 @@ Lo que pidieron, en la misma pantalla:
 - **«Paquetes», no «cajas»**: *"cuando vos le decís cajas ellos no saben de qué
   estás hablando"*. Jorge: *"tengo que cambiar el lenguaje de caja para
   paquetes"*.
+  ▶ **2026-10-31 (`PR-C34.2`).** En el audio sale tres veces: la etiqueta azul
+  del volumen («4 cajas de la pre-alerta 120», min 60–66), auditar («dos cajas,
+  dos escaneadas», min 78–84) y el contador de medición («cajas escaneadas»,
+  min 102–108). Cambió todo lo que se lee en esas pantallas: medición (la
+  mesa, los modales, «Sigo sin él, lo dejo de lado», «Medirlo solo»), la
+  etiqueta del volumen, /medicion/volumenes, auditar y sus mensajes. **No** se
+  tocaron las cajas del manifiesto —esas sí son cajas— ni el módulo de Caja.
 
 Lo que se probó y anduvo:
 - El paquete sin pre-alerta escaneado en la tanda de un consolidado: *«no está

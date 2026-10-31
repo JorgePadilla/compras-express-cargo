@@ -239,7 +239,7 @@ export default class extends Controller {
     const n = this.cajas.length
     this.finTextoTarget.textContent =
       `${this.cliente?.codigo || ""} · ${this.volumenes.length} volumen${this.volumenes.length === 1 ? "" : "es"} · ` +
-      `${n} caja${n === 1 ? "" : "s"}, todas escaneadas.`
+      `${n} paquete${n === 1 ? "" : "s"}, ${n === 1 ? "escaneado" : "todos escaneados"}.`
     this.finModalTarget.showModal()
     // El foco a «Agregar otro volumen», no a «Guardar»: un Enter de la pistola
     // con el modal abierto cierra y sigue, nunca guarda. Guardar es F9.
@@ -428,7 +428,7 @@ export default class extends Controller {
     const n = this.cajas.length
     const v = this.volumenes.length
     this.resumenTarget.textContent =
-      `${v} volumen${v === 1 ? "" : "es"} · ${n} caja${n === 1 ? "" : "s"} · faltan ${this._faltan()}`
+      `${v} volumen${v === 1 ? "" : "es"} · ${n} paquete${n === 1 ? "" : "s"} · faltan ${this._faltan()}`
 
     this.cajasTarget.replaceChildren(...this.cajas.map((c) => {
       const li = document.createElement("li")

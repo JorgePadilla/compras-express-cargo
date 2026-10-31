@@ -271,7 +271,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal 2, Bulto.count
     assert_equal [ "1 de 2", "2 de 2" ], json["bultos"].map { |b| b["de_cuantos_texto"] }
     assert_equal 1, Bulto.pluck(:sesion).uniq.size, "las dos salieron de la misma tanda"
-    assert_match(/2 volúmenes guardados de 2 cajas/, json["mensaje"])
+    assert_match(/2 volúmenes guardados de 2 paquetes/, json["mensaje"])
 
     get json["imprimir_url"]
     assert_response :success
@@ -347,7 +347,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal etiquetas_sesion_medicion_path(sesion, print: "true"), json["tanda"]["etiquetas_url"]
     assert_equal 2, json["tanda"]["cajas"]
     assert_equal 2, json["tanda"]["volumenes"].size
-    assert_match(/tanda de 2 cajas y 2 volúmenes/, json["mensaje"])
+    assert_match(/tanda de 2 paquetes y 2 volúmenes/, json["mensaje"])
 
     get json["tanda"]["etiquetas_url"]
     assert_response :success
@@ -364,7 +364,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_match "20.00", response.body
     assert_match "10x12x14", response.body
     assert_no_match(/3\.00/, response.body)
-    assert_match "1 caja", response.body
+    assert_match "1 paquete", response.body
     assert_match "MD", response.body
   end
 
@@ -523,7 +523,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal [ 6.0, 3.0 ], json["remedir_tanda"]["volumenes"].map { |v| v["peso"] }
     assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_tanda"]["volumenes"].first.values_at("alto", "largo", "ancho")
     assert_equal [ @primera.id, otra.id ].sort, json["hermanas"].map { |h| h["id"] }.sort, "vuelven las dos, no solo la escaneada"
-    assert_match(/Midiendo de nuevo: 2 cajas y 2 volúmenes/, json["mensaje"])
+    assert_match(/Midiendo de nuevo: 2 paquetes y 2 volúmenes/, json["mensaje"])
   end
 
   test "sin «medir de nuevo», la caja ya medida sigue rebotando" do

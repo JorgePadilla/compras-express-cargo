@@ -168,7 +168,7 @@ class AuditarPreFacturaController < ApplicationController
   # otros dos"*), y la pantalla dice cuántos trae.
   def resumen(bultos, cajas)
     vol = bultos.size == 1 ? "1 volumen" : "#{bultos.size} volúmenes"
-    "#{vol} · #{cajas.size} caja#{"s" if cajas.size != 1}"
+    "#{vol} · #{cajas.size} paquete#{"s" if cajas.size != 1}"
   end
 
   def volumen_json(bulto)

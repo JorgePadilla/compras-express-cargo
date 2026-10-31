@@ -107,7 +107,7 @@ class MedicionFocoYNotasTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear(tarde.numero_recepcion)
     assert_selector "dialog[open]", text: "Traé el resto del estante", wait: 5
-    within("dialog[open]") { click_on "Dejarla de lado" }
+    within("dialog[open]") { click_on "Dejarlo de lado" }
 
     la_pistola_sigue_andando(otra, 1)
   end

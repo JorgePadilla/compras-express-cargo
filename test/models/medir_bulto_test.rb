@@ -84,7 +84,7 @@ class MedirBultoTest < ActiveSupport::TestCase
     e = assert_raises(MedirBulto::NoSePuede) do
       MedirBulto.new(user: @user).guardar!(paquete_ids: [], volumenes: [ { peso: "10" } ])
     end
-    assert_match(/ninguna caja/, e.message)
+    assert_match(/ningún paquete/, e.message)
   end
 
   test "C28-08 · sin volúmenes no hay nada que guardar" do
@@ -100,7 +100,7 @@ class MedirBultoTest < ActiveSupport::TestCase
     e = assert_raises(MedirBulto::NoSePuede) do
       MedirBulto.new(user: @user).guardar!(paquete_ids: [ una.id, una.id ], volumenes: [ { peso: "10" } ])
     end
-    assert_match(/escaneada dos veces/, e.message)
+    assert_match(/escaneado dos veces/, e.message)
   end
 
   # ── C27-33 · Medir de nuevo, ahora la tanda entera ──────────────────────

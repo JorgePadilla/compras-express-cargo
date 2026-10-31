@@ -57,7 +57,7 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_equal "ok", data["resultado"]
     assert_equal @bulto.sesion, data["sesion"]
     assert_equal({ "codigo" => @cliente.codigo, "nombre" => @cliente.nombre_completo }, data["cliente"])
-    assert_equal "1 volumen · 2 cajas", data["resumen"]
+    assert_equal "1 volumen · 2 paquetes", data["resumen"]
     assert_nil data["aviso_ndem"], "la etiqueta está al día"
     assert_equal 1, data["volumenes"].size
     assert_equal 4.0, data["volumenes"].first["peso"]
@@ -222,7 +222,7 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
            params: { sesiones: [ @bulto.sesion ], escaneadas: [ @cajas.first.id ] }, as: :json
     end
     assert_response :unprocessable_entity
-    assert_match(/Faltan 1 caja/, response.parsed_body["mensaje"])
+    assert_match(/Faltan 1 paquete/, response.parsed_body["mensaje"])
   end
 
   # PR-P.8 · La red de abajo: si un índice único salta igual, la pantalla

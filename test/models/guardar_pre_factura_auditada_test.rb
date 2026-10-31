@@ -56,7 +56,7 @@ class GuardarPreFacturaAuditadaTest < ActiveSupport::TestCase
     bulto, = medir(cajas, { peso: "2" })
 
     error = assert_raises(GuardarPreFacturaAuditada::NoSePuede) { guardar([ bulto.sesion ], [ cajas.first.id ]) }
-    assert_match(/Faltan 1 caja/, error.message)
+    assert_match(/Faltan 1 paquete/, error.message)
     assert_nil cajas.last.reload.pre_factura_id
   end
 

@@ -103,7 +103,7 @@ class MedicionController < ApplicationController
     encontrados = Paquete.por_codigo_de_etiqueta(codigo).includes(:cliente, :tipo_envio, :user).to_a
 
     if encontrados.empty?
-      return render json: { resultado: "no_encontrado", mensaje: "No se encontró ninguna caja con «#{codigo}»." }
+      return render json: { resultado: "no_encontrado", mensaje: "No se encontró ningún paquete con «#{codigo}»." }
     end
     # C26-02 · **Varias cajas con el mismo warehouse receipt no son una
     # ambigüedad: son un envío partido**, y es justo lo que Jorge quiere ver al
@@ -114,7 +114,7 @@ class MedicionController < ApplicationController
     if encontrados.size > 1 && (envio.size > 1 || envio.first.blank?)
       return render json: { resultado: "ambiguo",
                             mensaje: "«#{codigo}» aparece en #{envio.compact.size} envíos distintos " \
-                                     "(#{envio.compact.take(2).join(", ")}…): escaneá el warehouse receipt de la caja que tenés en la mano." }
+                                     "(#{envio.compact.take(2).join(", ")}…): escaneá el warehouse receipt del paquete que tenés en la mano." }
     end
 
     # C27-02 · La que toca: la primera del envío que **no esté ya en la tanda**.
@@ -193,7 +193,7 @@ class MedicionController < ApplicationController
       respuesta = respuesta.merge(
         remedir_tanda: { sesion: paquete.medicion_sesion, volumenes: bultos.map { |b| bulto_json(b) } },
         hermanas: cajas.map { |h| datos_de(h) },
-        mensaje: "Midiendo de nuevo: #{cajas.size} caja#{"s" if cajas.size != 1} y " \
+        mensaje: "Midiendo de nuevo: #{cajas.size} paquete#{"s" if cajas.size != 1} y " \
                  "#{volumenes_texto(bultos.size)} del #{paquete.medido_at&.strftime('%d/%m/%Y')} " \
                  "por #{paquete.medido_por}. Pesá y medí de nuevo y guardá: lo anterior se reemplaza y sus etiquetas dejan de valer."
       )
@@ -391,7 +391,7 @@ class MedicionController < ApplicationController
       medidas: medidas.map { |p| { codigo: codigo_de(p), fecha: p.medido_at&.strftime("%d/%m/%Y"), por: p.medido_por } },
       puede_remedir: puede, remedir_codigo: (codigo_de(medidas.first) if puede),
       mensaje: "El consolidado #{grupo.pre_alerta.numero_documento} ya tiene #{medidas.size} " \
-               "caja#{"s" if medidas.size != 1} medida#{"s" if medidas.size != 1}" \
+               "paquete#{"s" if medidas.size != 1} medido#{"s" if medidas.size != 1}" \
                "#{" desde el #{primera.medido_at.strftime('%d/%m/%Y')}" if primera&.medido_at}. " +
                (puede ? "Traelas del estante y medí todo junto: van en el mismo volumen." :
                         "#{congeladas.any? ? 'Ya están en una pre-factura' : 'Se midieron en tandas distintas'}: " \
@@ -477,7 +477,7 @@ class MedicionController < ApplicationController
     bultos = paquete.bultos.to_a
     cajas = Paquete.where(medicion_sesion: paquete.medicion_sesion).count
     pesos = bultos.map { |b| "#{format('%.2f', b.peso.to_f)} lb" }.join(", ")
-    "Esta caja ya está medida, en una tanda de #{cajas} caja#{"s" if cajas != 1} y " \
+    "Este paquete ya está medido, en una tanda de #{cajas} paquete#{"s" if cajas != 1} y " \
       "#{volumenes_texto(bultos.size)} (#{pesos}), por #{paquete.medido_por} " \
       "el #{paquete.medido_at&.strftime('%d/%m/%Y %H:%M')}. Podés reimprimir sus etiquetas, " \
       "o medir la tanda de nuevo si algún número estaba mal."
@@ -487,9 +487,9 @@ class MedicionController < ApplicationController
 
   def mensaje_guardado(bultos, cajas)
     if bultos.size == 1
-      "Medición guardada: #{cajas} caja#{"s" if cajas != 1} en un solo volumen, una etiqueta."
+      "Medición guardada: #{cajas} paquete#{"s" if cajas != 1} en un solo volumen, una etiqueta."
     else
-      "#{bultos.size} volúmenes guardados de #{cajas} caja#{"s" if cajas != 1}: #{bultos.size} etiquetas."
+      "#{bultos.size} volúmenes guardados de #{cajas} paquete#{"s" if cajas != 1}: #{bultos.size} etiquetas."
     end
   end
 
@@ -731,12 +731,12 @@ class MedicionController < ApplicationController
       "#{codigo_de(paquete)} es de la pre-alerta #{grupo.pre_alerta.numero_documento}, ya facturada: " \
         "no la unas, hay que partir la pre-alerta. Se mide y se factura aparte."
     elsif grupo&.consolidada?
-      "#{codigo_de(paquete)} · UNIR con #{grupo.pre_alerta.numero_documento}: #{grupo.medidas} de #{grupo.total} medidas."
+      "#{codigo_de(paquete)} · UNIR con #{grupo.pre_alerta.numero_documento}: #{grupo.medidas} de #{grupo.total} medidos."
     elsif grupo && grupo.pre_alerta.nil?
-      "#{codigo_de(paquete)} · #{grupo.total} cajas con este warehouse receipt: " \
-        "#{grupo.medidas} medidas, vas por la #{paquete.numero_caja || 1} de #{grupo.total}."
+      "#{codigo_de(paquete)} · #{grupo.total} paquetes con este warehouse receipt: " \
+        "#{grupo.medidas} medidos, vas por el #{paquete.numero_caja || 1} de #{grupo.total}."
     elsif grupo
-      "#{codigo_de(paquete)} · viene partido en #{grupo.total} cajas: #{grupo.medidas} medidas."
+      "#{codigo_de(paquete)} · viene partido en #{grupo.total} paquetes: #{grupo.medidas} medidos."
     else
       "#{codigo_de(paquete)} · #{paquete.cliente&.nombre_completo}"
     end
