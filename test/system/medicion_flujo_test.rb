@@ -431,8 +431,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='tandaCajas'] button", visible: :all
 
     linea = find("[data-medicion-target='tandaConsolidado']")
-    assert_includes linea.text, "Consolidando #{pa.numero_documento}"
-    assert_includes linea.text, "escaneadas 1"
+    assert_includes linea.text, "Consolidado #{pa.numero_documento}"
+    assert_includes linea.text, "escaneados 1"
     assert_includes linea.text, "faltan 2"
     assert_not_includes linea.text, segunda.numero_recepcion, "los códigos van en los dibujitos, no en la frase"
 
@@ -442,7 +442,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     # C28-11 · El número grande: lo resuelto contra el total.
     assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    # C34-05 · Lo que falta, escrito y por dónde está.
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Falta 1 acá, sin medir · Falta 1 que no ha llegado a Miami"
     assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
 
     # C28-13 · La segunda **ya llegó** y no está en la tanda: guardar frena y
@@ -504,6 +505,41 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_includes autorizacion.detalle, segunda.numero_recepcion
   end
 
+  # C34-05 · *"Como es el primero, le tiene que decir: este paquete es de un
+  # consolidado… ahí no lo vi"*. Con una pre-alerta de un solo paquete, el
+  # bloque no salía.
+  test "el consolidado se dice desde el primer paquete, aunque la pre-alerta tenga uno solo" do
+    pa = consolidado_con(@paquete)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "Consolidado #{pa.numero_documento} · 1 paquete", wait: 5
+    assert_selector "[data-medicion-target='tandaContador']", text: "1 de 1"
+  end
+
+  # C34-06 · Lo medido en una tanda anterior cuenta como resuelto y se ve
+  # aparte: *"cuatro escaneadas, una medida… no está jalando la que ya
+  # medimos, la primera"*.
+  test "lo medido en otra tanda cuenta en el número y se dice «medidos antes»" do
+    pa, otros = grupo_de_tres(@paquete)
+    segunda = llego(otros.first)
+    # Medida ayer en su propia tanda (lo que dejó «Medirlo solo»).
+    segunda.update_columns(medido_at: 1.day.ago, medido_por: "MD", medicion_sesion: SecureRandom.uuid)
+
+    visit medicion_index_path
+    escanear(@paquete.numero_recepcion)
+    # C29-18 · El consolidado ya tiene uno medido: el modal lo dice primero.
+    assert_selector "dialog[open]", text: "Traé el resto del estante", wait: 5
+    within("dialog[open]") { click_on "Medirlo solo" }
+    assert_selector "[data-medicion-target='mesa'] li", count: 1, wait: 5
+
+    assert_selector "[data-medicion-target='tandaContador']", exact_text: "2 de 3", wait: 5
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneados 1 · medidos antes 1 · faltan 1"
+    assert_selector "[data-medicion-target='tandaFaltan']", exact_text: "Falta 1 que no ha llegado a Miami"
+    assert pa
+  end
+
   # C28-11 · *"Completado… sí, el audio"*.
   test "con todas las cajas del consolidado escaneadas sale COMPLETADO" do
     pa = consolidado_con(@paquete)
@@ -512,7 +548,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 1", wait: 5
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Falta 1 acá, sin medir", wait: 5
     assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
 
     escanear_a_la_mesa(segunda, 2)
@@ -570,7 +606,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     escanear_a_la_mesa(consolidada, 2)
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneadas 2"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneados 2"
 
     teclear "20", "10", "12", "14"
     espiar_impresion
@@ -744,7 +780,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='tandaConsolidado']",
                     text: "#{clientes(:juan).nombre_completo} tiene 3 en el manifiesto #{manifiesto.numero}", wait: 5
     assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Faltan 2 acá, sin medir"
     assert_selector "[data-medicion-target='tandaAusentes']", text: tercera.reload.numero_recepcion
     assert_selector "[data-medicion-target='tandaAusentes']", text: "acá, sin medir"
 
@@ -881,6 +917,11 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_selector "[data-medicion-target='mesa'] li", text: tarde.numero_recepcion
+    # C34-06 · El medido de antes vuelve a la mesa **una** vez: el contador
+    # decía «3 de 2» porque lo sumaba como escaneado y como medido. Y su
+    # renglón dice que ya estaba medido.
+    assert_selector "[data-medicion-target='tandaContador']", exact_text: "2 de 2"
+    assert_selector "[data-medicion-target='mesa'] li", text: /#{medida.numero_recepcion}.*MEDIDO ANTES/m
     # C30-11 · *"Desde el instante que le dio que lo va a medir de nuevo… se
     # le borre todo… que solo le diga volumen anterior"*. Antes el volumen
     # viejo volvía a la lista y había que quitarlo con la X —*"lo que hiciste

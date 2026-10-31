@@ -13775,6 +13775,10 @@ Lo que pidieron, en la misma pantalla:
 - **«Falta uno que no ha llegado a Miami», escrito**, y más grande que los
   cuadritos (min 102–108): *"6 de 6, falta uno, pero debería decir falta uno que
   no ha llegado a Miami… es más explícito lo que te dijo Vanessa también"*.
+  ▶ **2026-10-31 (`PR-C34.3`)**: al lado del número grande, en letra grande,
+  lo que falta por dónde está: «Falta 1 acá, sin medir · Falta 1 que no ha
+  llegado a Miami». Y desde el primer paquete la línea dice «Consolidado PA-120
+  · 5 paquetes», en grande, aunque la pre-alerta tenga uno solo.
 - **«Paquetes», no «cajas»**: *"cuando vos le decís cajas ellos no saben de qué
   estás hablando"*. Jorge: *"tengo que cambiar el lenguaje de caja para
   paquetes"*.
@@ -13808,6 +13812,16 @@ Dos errores en la misma cuenta del consolidado de la pre-alerta 120:
 
 Hay que reproducirlos con un test: consolidado de N paquetes, una tanda medida
 antes, una caja ajena apartada con «Sigo sin él».
+
+▶ **2026-10-31 (`PR-C34.3`).** Reproducido, y la causa no era «Sigo sin él»:
+el apartado no entra nunca a la mesa ni al grupo. El número sumaba **dos
+cuentas** —lo escaneado en esta tanda más lo medido— y el paquete medido que
+vuelve a la mesa con «medir de nuevo todo junto» estaba en las dos: «3 de 2»
+en el test, o el «6 de 6 · falta uno» de la pasada. Ahora es **el total menos
+lo que falta**. Lo medido en una tanda anterior que se mide de nuevo y se sacó
+de la mesa cuenta como faltante, porque al guardar vuelve a quedar sin medir.
+Y lo medido antes se ve: el renglón de la mesa dice «MEDIDO ANTES», y la línea
+dice «escaneados 1 · medidos antes 1 · faltan 1».
 
 #### C34-07 · Pre-factura: «es de un grupo que todavía no está completo» frena el arranque del consolidado (min 6–12, 66–78, 108–114) — ❌ visto en pantalla
 
@@ -14048,7 +14062,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ❓ A reproducir |
 | `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
 | `C34-05` | El consolidado que se mide en partes: sumar al anterior | ❌ Falta; la forma espera `RP-111` |
-| `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ❌ Falta |
+| `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ✅ ▶ **2026-10-31** (`PR-C34.3`): contaba dos veces el medido que volvía a la mesa; ahora es el total menos lo que falta, y lo medido antes se ve |
 | `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
 | `C34-09` | Instrucciones del cliente solo para Miami | ❌ Falta. Decidido |
