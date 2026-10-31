@@ -38,7 +38,8 @@ export default class extends Controller {
     "cajas", "volumenes", "lineas",
     "finModal", "finTexto", "finGuardar", "finSeguir", "abierta",
     "etiquetasModal", "etiquetasInput",
-    "preguntaModal", "preguntaTexto", "preguntaSi"
+    "preguntaModal", "preguntaTexto", "preguntaSi",
+    "sucursalModal", "sucursalTexto", "sucursalEntendido", "etiquetasDestino"
   ]
   static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String, abrir: Object }
 
@@ -154,16 +155,21 @@ export default class extends Controller {
           // La etiqueta es de una medición anterior: se avisa con otro sonido,
           // y la tanda de hoy queda cargada igual. C34-07 · Al grupo que le
           // falta carga también se lo dice, con su sonido: no traba.
-          const avisos = [ data.aviso_ndem, data.grupo_aviso ].filter(Boolean)
+          // Lista 8 · El trato de precio del cliente va en la misma franja.
+          const avisos = [ data.aviso_ndem, data.grupo_aviso, data.cliente_aviso ].filter(Boolean)
           if (data.aviso_ndem) {
             this.dispatch("medicionAnterior")
-          } else if (data.grupo_aviso) {
+          } else if (data.grupo_aviso || data.cliente_aviso) {
             this.dispatch("grupoIncompleto")
           } else {
             this.dispatch("ok")
           }
           if (avisos.length) this._avisar("alerta", avisos.join(" · "))
           else this._avisar("ok", data.mensaje)
+          // C34-08 · Lista 9 · Adónde va, en un modal rojo que no se pasa por
+          // alto: la nota «dejar en San Pedro» nadie la leyó.
+          this._destino = data.sucursal_aviso || null
+          if (data.sucursal_aviso) this._avisarSucursal(data.sucursal_aviso)
         } else {
           this.dispatch("rechazo")
           this._avisar("error", data.mensaje, data.pre_factura_url)
@@ -271,6 +277,9 @@ export default class extends Controller {
 
     this._modoPendiente = modo
     this.etiquetasInputTarget.value = String(Math.max(this.volumenes.length, 1))
+    // C34-08 · *"Y al final, cuando impriman la etiqueta también"*.
+    this.etiquetasDestinoTarget.textContent = this._destino || ""
+    this.etiquetasDestinoTarget.hidden = !this._destino
     // Ningún modal de una pantalla de pistola abre mudo (A1-10).
     this.dispatch("cuantasEtiquetas")
     this.etiquetasModalTarget.showModal()
@@ -360,6 +369,22 @@ export default class extends Controller {
       }))
   }
 
+  // ── C34-08 · Lista 9 · «Va para Tegucigalpa» ────────────────────────────
+
+  _avisarSucursal(texto) {
+    this.sucursalTextoTarget.textContent = texto
+    this.dispatch("sucursalDistinta")
+    this.sucursalModalTarget.showModal()
+    requestAnimationFrame(() => this.sucursalEntendidoTarget.focus())
+  }
+
+  // «Entendido», Enter o Escape: la pistola sigue.
+  sucursalEntendido(e) {
+    if (e?.type === "cancel") e.preventDefault()
+    this.sucursalModalTarget.close()
+    enfocar(this.codigoTarget)
+  }
+
   // ── C34-07 · «¿Está seguro que desea notificarlo?» ───────────────────────
 
   _preguntar(modo, etiquetas, mensaje) {
@@ -398,6 +423,7 @@ export default class extends Controller {
   // ── Pintar ──────────────────────────────────────────────────────────────
 
   _reiniciar() {
+    this._destino = null
     this.sesiones = []
     this.cajas = []
     this.escaneadas = new Set()

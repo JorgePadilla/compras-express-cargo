@@ -235,6 +235,30 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal :ok, auditoria([ a.sesion ]).volumen(qr(dos.first)).tipo
   end
 
+  # ── C34-08 · Lista 8 y 9 · Lo que el auditor tiene que saber al escanear ──
+
+  test "lista 9 · el cliente de otra sucursal avisa adónde va; San Pedro no" do
+    tegus = caja(sucursal: sucursales(:humuya_tgu))
+    medir([ tegus ], { peso: "2" })
+    assert_equal "Va para Humuya TGU: este cliente retira allá.", auditoria.volumen(qr(tegus)).sucursal_aviso
+
+    sps = caja(sucursal: sucursales(:zeron_sps))
+    medir([ sps ], { peso: "2" })
+    assert_nil auditoria.volumen(qr(sps)).sucursal_aviso
+  end
+
+  test "lista 8 · la tarifa propia del cliente, y si no paga mínimo, se dicen" do
+    una = caja
+    medir([ una ], { peso: "2" })
+    assert_nil auditoria.volumen(qr(una)).cliente_aviso, "sin tarifa propia no hay nada que decir"
+
+    Tarifa.create!(tipo_envio: @cer, cliente: @cliente, precio_libra: 3.00, moneda: "USD", aplica_minimo: false)
+
+    aviso = auditoria.volumen(qr(una)).cliente_aviso
+    assert_includes aviso, "tiene tarifa especial en #{@cer.nombre}"
+    assert_includes aviso, "no paga mínimo"
+  end
+
   # ── Las cajas ──────────────────────────────────────────────────────────
 
   test "la etiqueta de Miami de una caja de la tanda: pertenece; dos veces: ya escaneada" do

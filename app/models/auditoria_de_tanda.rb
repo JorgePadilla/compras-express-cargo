@@ -19,7 +19,7 @@
 # entre un escaneo y el siguiente.
 class AuditoriaDeTanda
   Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, :grupo_aviso,
-                         keyword_init: true) do
+                         :sucursal_aviso, :cliente_aviso, keyword_init: true) do
     def ok? = tipo.in?(%i[ok pertenece])
   end
 
@@ -59,13 +59,14 @@ class AuditoriaDeTanda
                            mensaje: "#{codigo_de(caja)} todavía no está medido: medilo primero en Medición.")
     end
 
-    cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
+    cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio, :manifiesto, :sucursal).order(:id).to_a
     rechazo = rechazo_de_la_tanda(sesion, cajas)
     return rechazo if rechazo
 
     avisos = [ medicion_anterior(codigo, bultos), prepagadas_aviso(cajas) ].compact
     Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: avisos.join(" · ").presence,
                   grupo_aviso: grupo_aviso(cajas, sesion),
+                  sucursal_aviso: self.class.sucursal_aviso(cajas), cliente_aviso: self.class.trato_aviso(cajas),
                   mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} paquete#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
   end
 
@@ -105,6 +106,45 @@ class AuditoriaDeTanda
     en_pantalla = @sesiones + [ sesion.to_s ]
     pendientes.map { |g| "#{g.nombre} no está completo: #{g.lo_que_falta(en_pantalla: en_pantalla)}." }
               .join(" ") + " F8 lo guarda consolidando; F9 pregunta antes de avisar."
+  end
+
+  # C34-08 · Lista 9 · *"Alerta de que el cliente es de Tegucigalpa al iniciar
+  # la pre-factura"*: el modal de «va para…» que el equipo pidió *"cuando
+  # escanean el QR de peso"*. La sucursal es la de la etiqueta de entrega
+  # (`EtiquetaDeEntrega#sucursal`): la de los paquetes, o la del cliente.
+  # San Pedro —la de por defecto— no avisa.
+  def self.sucursal_aviso(cajas)
+    sucursal = sucursal_de_retiro(cajas)
+    return nil if sucursal.nil? || sucursal == Sucursal.para_cliente_nuevo
+
+    "Va para #{sucursal.nombre}: este cliente retira allá."
+  end
+
+  def self.sucursal_de_retiro(cajas)
+    de_paquetes = cajas.filter_map(&:sucursal)
+    return de_paquetes.tally.max_by { |_s, n| n }.first if de_paquetes.any?
+
+    cajas.first&.cliente&.sucursal_retiro
+  end
+
+  # Lista 8 · *"Alerta al iniciar la pre-factura si el cliente tiene tarifa
+  # especial o no paga mínimo"*. Yusef: *"podemos poner ahí: cliente no paga
+  # mínimo"*, al escanear el QR de peso. Es la tarifa **propia** del cliente
+  # en el servicio de la tanda —el primer escalón de `Tarifa.resolver`—, no la
+  # de su categoría.
+  def self.trato_aviso(cajas)
+    cliente = cajas.first&.cliente
+    tipo = cajas.first&.tipo_envio
+    return nil if cliente.nil? || tipo.nil?
+
+    propias = Tarifa.activas.where(cliente_id: cliente.id, tipo_envio_id: tipo.id).to_a
+    partes = []
+    partes << "tiene tarifa especial en #{tipo.nombre}" if propias.any?
+    partes << "no paga mínimo" if propias.any? && propias.none?(&:aplica_minimo)
+    partes << "se le cobra solo el volumétrico" if cliente.cobra_solo_volumetrico?(tipo)
+    return nil if partes.empty?
+
+    "#{cliente.codigo}: #{partes.to_sentence(two_words_connector: ' y ', last_word_connector: ' y ')}."
   end
 
   # Los grupos de estas cajas a los que les falta algo, uno por grupo.

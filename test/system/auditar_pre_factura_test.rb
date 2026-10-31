@@ -175,6 +175,24 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_equal PreFactura.where(auditado_por: @user).last.id, una.reload.pre_factura_id
   end
 
+  # C34-08 · Lista 9 · *"Un modal que le diga para dónde va… cuando escanean
+  # el QR de peso… y al final, cuando impriman la etiqueta también"*.
+  test "el cliente de otra sucursal: modal rojo al escanear el volumen, y lo repite al imprimir" do
+    @cajas.each { |c| c.update_columns(sucursal_id: sucursales(:humuya_tgu).id) }
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+
+    escanear @qr
+    assert_selector "[data-auditar-pre-factura-target='sucursalModal'][open]", text: "Va para Humuya TGU", wait: 5
+    page.driver.browser.action.send_keys(:enter).perform
+    assert_no_selector "[data-auditar-pre-factura-target='sucursalModal'][open]", wait: 5
+
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+    page.driver.browser.action.send_keys(:f9).perform
+    assert_selector "[data-auditar-pre-factura-target='etiquetasModal'][open]", text: "Va para Humuya TGU", wait: 5
+  end
+
   # C31-17 · *"Cuántas etiquetas el F9"*: se cambia el número, sale con eso
   # —una por bolsa, «i de N»— y queda guardado para reimprimir.
   test "F9 pregunta cuántas etiquetas: se cambia a 3 y salen 3" do

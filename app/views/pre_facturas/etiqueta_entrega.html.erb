@@ -14,8 +14,8 @@
 <% (1..e.etiquetas).each do |i| %>
   <div class="entrega" data-etiqueta="<%= i %>">
     <div class="arriba">
-      <div class="izq">
-        <div class="rotulo">RETIRA EN</div>
+      <div class="izq<%= " otra" if e.otra_sucursal? %>">
+        <div class="rotulo"><%= e.otra_sucursal? ? "VA PARA" : "RETIRA EN" %></div>
         <div class="sucursal" data-ajustar data-ajustar-lineas data-ajustar-min="14"><%= e.sucursal_nombre.presence || "SIN SUCURSAL" %></div>
         <div class="tipo" data-ajustar data-ajustar-min="16"><%= e.tipo_envio || "—" %></div>
         <div class="cliente-codigo" data-ajustar data-ajustar-min="12"><%= e.cliente_codigo %></div>
