@@ -22,6 +22,10 @@ class PreFacturasController < ApplicationController
   # *"es la única etapa de todo el sistema que ellos ocupan de imprimir ese"*.
   def etiqueta_entrega
     @etiqueta = EtiquetaDeEntrega.new(@pre_factura)
+    # C34 · Lista 10 · F10: impresa la etiqueta, la misma pestaña pasa a la
+    # orden y la imprime (`_etiqueta_autoprint`, como el Warehouse Receipt
+    # después de la etiqueta en /etiquetar).
+    @despues_de_imprimir = pre_factura_path(@pre_factura, print: "true") if params[:orden].present?
     render layout: "etiqueta_entrega"
   end
 

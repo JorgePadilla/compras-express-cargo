@@ -83,6 +83,9 @@
               data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
         <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
               data: { auditar_pre_factura_target: "guardarBtn", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+        <%# C34 · Lista 10 · F10: lo mismo que F9, más la orden impresa. %>
+        <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F10", shortcut_label_only: true,
+              data: { action: "auditar-pre-factura#guardarConOrden" })) { "Imprimir orden y etiqueta" } %>
       </div>
     </section>
 
@@ -154,6 +157,8 @@
             data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { auditar_pre_factura_target: "finGuardar", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+      <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F10", shortcut_label_only: true,
+            data: { action: "auditar-pre-factura#guardarConOrden" })) { "Imprimir orden y etiqueta" } %>
     </div>
   </dialog>
 
