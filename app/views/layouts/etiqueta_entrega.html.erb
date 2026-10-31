@@ -18,8 +18,8 @@
        la misma porque son los mismos dos partials.
 
        **Solo negro**: *"la impresora es negra"*. La franja de consolidando
-       es negro sólido con letra blanca, que en una térmica es lo que más
-       grita sin color.
+       era negro sólido con letra blanca; desde el 2026-10-31 es un marco
+       grueso con letra negra (*"una torta negra, mucha tinta"*, Jorge).
 
        Que quepa lo mide `etiqueta_entrega_cabe_test` en Chrome, con el
        nombre y la sucursal más largos: `overflow: hidden` recorta en
@@ -73,9 +73,9 @@
     .der { flex: 0 0 2.2in; width: 2.2in; display: flex; flex-direction: column; align-items: center; }
     /* C34-08 · *"Esa etiqueta, hay que traerla porque tenemos que modificar el
        tamaño de la letra"*, dicho al hablar de adónde va. Cuando **no** es
-       San Pedro, el bloque sale en negro, como la franja de abajo: «VA PARA
-       TEGUCIGALPA». La nota «dejar en San Pedro» nadie la leyó; el negro no
-       se pasa por alto. El rótulo es más grande ahí (10 pt) y queda en 7 en
+       San Pedro, el bloque sale enmarcado, como la franja de abajo: «VA PARA
+       TEGUCIGALPA». La nota «dejar en San Pedro» nadie la leyó; un marco
+       grueso no se pasa por alto. El rótulo es más grande ahí (10 pt) y queda en 7 en
        San Pedro, con el mismo alto de renglón (mayúsculas, sin colas): el alto
        no da para más sin achicar la sucursal, que es lo
        que Yusef pidió «grandísimo». Sin foto de Yusef todavía: es la lectura
@@ -83,7 +83,11 @@
     .rotulo { font-size: 7pt; font-weight: 700; letter-spacing: .08em; line-height: 1.2; }
     .sucursal { font-size: 42pt; font-weight: 900; line-height: 1.15; max-height: 2.35em; overflow: hidden; text-transform: uppercase; }
     .izq.otra .rotulo { font-size: 10pt; font-weight: 900; line-height: .84; }
-    .izq.otra .rotulo, .izq.otra .sucursal { background: #000; color: #fff; padding: 0 .06in; }
+    /* C34 · Jorge, 2026-10-31: *"tiene una torta negra, mucha tinta"*. El
+       bloque y la franja ya no se rellenan de negro: un **marco grueso** grita
+       igual de lejos y gasta una fracción de la cinta. La letra queda negra
+       sobre blanco, en su tamaño. */
+    .izq.otra .destino { border: .03in solid #000; padding: 0 .06in; }
     .tipo     { font-size: 34pt; font-weight: 900; line-height: 1.1; overflow: hidden; }
     .cliente-codigo { font-size: 26pt; font-weight: 700; font-family: "Courier New", monospace; line-height: 1.1; overflow: hidden; }
     .nombre   { font-size: 20pt; font-weight: 700; line-height: 1.1; max-height: 2.25em; overflow: hidden; }
@@ -100,16 +104,20 @@
        encima del número de PF, y no tapa nada que se escanee.
        (La palabra en mayúsculas no puede ir en este comentario: el `<style>`
        viaja en el HTML y un test afirma que sin consolidar no aparece.) */
+    /* El marco ocupa alto que el relleno no ocupaba: la letra baja de 30 a
+       26 pt para que la franja mida un poco menos que antes (~46 px), y el
+       marco de otra sucursal tenga dónde caber. */
     .franja {
-      margin: auto -.16in;
-      background: #000;
-      color: #fff;
+      flex: 0 0 auto;
+      margin: auto 0;
+      border: .04in solid #000;
+      color: #000;
       text-align: center;
-      font-size: 30pt;
+      font-size: 26pt;
       font-weight: 900;
       letter-spacing: .06em;
-      line-height: 1;
-      padding: .045in 0;
+      line-height: 1.1;
+      padding: 0;
       overflow: hidden;
     }
 
@@ -121,6 +129,7 @@
        y todo eso, en pequeño está perfecto"*—. */
     .abajo { margin-top: auto; display: flex; gap: .14in; align-items: center; }
     .bolsa  { flex: 0 0 auto; font-size: 16pt; font-weight: 900; line-height: 1.15; white-space: nowrap; }
+    .pa     { flex: 0 1 auto; min-width: 0; font-size: 14pt; font-weight: 900; font-family: "Courier New", monospace; line-height: 1.15; white-space: nowrap; overflow: hidden; }
     .datos  { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; justify-content: flex-end; column-gap: .12in; }
     .cifras { display: flex; flex-wrap: nowrap; justify-content: flex-end; column-gap: .1in; }
     .cifra  { white-space: nowrap; }

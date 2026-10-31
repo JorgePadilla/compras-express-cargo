@@ -79,7 +79,7 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
   # C34-08 · Otra sucursal: «VA PARA», en negro. La peor otra vez —dos
   # renglones a tamaño completo, nombre en dos, la franja— y tiene que caber
   # con el rótulo más grande.
-  test "otra sucursal dice VA PARA en negro, y cabe a tamaño completo con la franja" do
+  test "otra sucursal dice VA PARA enmarcado, y cabe a tamaño completo con la franja" do
     clientes(:juan).update_columns(nombre: "María Fernanda", apellido: "Rodríguez Castellanos")
     # A 42pt «HUMUYA» / «TGU», como el caso de San Pedro: el negro no achica.
     flete(paquete(sucursal: sucursales(:humuya_tgu)), 999.99)
@@ -87,9 +87,31 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
     con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
 
     assert_selector ".izq.otra .rotulo", text: "VA PARA"
-    assert_equal "rgb(0, 0, 0)", page.evaluate_script("getComputedStyle(document.querySelector('.izq.otra .sucursal')).backgroundColor")
+    # C34 · Enmarcado, no relleno: *"una torta negra, mucha tinta"*.
+    estilo = page.evaluate_script("(function(){var s=getComputedStyle(document.querySelector('.izq.otra .destino'));" \
+                                  "return [s.borderTopStyle, s.borderTopWidth, s.backgroundColor];})()")
+    assert_equal "solid", estilo[0]
+    assert_operator estilo[1].to_f, :>=, 2, "el marco tiene que gritar"
+    assert_includes [ "rgba(0, 0, 0, 0)", "rgb(255, 255, 255)" ], estilo[2], "sin relleno negro"
     assert_operator caja_de(".sucursal")[:height], :>, puntos(".sucursal") * 1.5, "la sucursal no quedó en dos renglones"
     assert_equal 42, (puntos(".sucursal") * 72 / 96).round, "la sucursal se achicó"
+    assert_cabe
+  end
+
+  # C34 · El número de la pre-alerta, como en la etiqueta del volumen.
+  test "lleva el número de la pre-alerta de lo que va adentro, y cabe" do
+    p = paquete
+    pa = PreAlerta.create!(numero_documento: "PA-000120", cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+                           consolidado: true, estado: "pre_alerta", titulo: "Consolidado",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: p.tracking, descripcion: "Bulto", fecha: Date.current, paquete: p)
+    bulto, = MedirBulto.new(user: users(:admin)).guardar!(paquete_ids: [ p.id ], volumenes: [ { peso: "5" } ])
+    @pf.pre_factura_items.create!(concepto: "Flete", paquete: p, bulto: bulto, peso_cobrar: 5, precio_libra: 1, origen: "volumen")
+    @pf.update_columns(etiquetas: 3)
+
+    con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
+
+    assert_selector ".pa", text: "PA-000120", minimum: 1
     assert_cabe
   end
 
@@ -116,7 +138,7 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
   # *"Así en medio, que estorbe"* — pero *"aquí no puede ser el mismo lugar
   # del QR"*: acostada, la franja va de borde a borde debajo del QR y de los
   # datos de arriba, y encima del número de PF. No toca nada que se escanee.
-  test "la franja va entre arriba y abajo, de borde a borde, y no tapa el QR" do
+  test "la franja va entre arriba y abajo, a todo el ancho, y no tapa el QR" do
     la_peor
 
     con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
@@ -128,7 +150,11 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
     assert_operator franja[:top], :>=, qr[:bottom], "la franja se mete en el QR"
     assert_operator franja[:top], :>=, caja_de(".izq")[:bottom], "la franja tapa los datos de arriba"
     assert_operator franja[:bottom], :<=, caja_de(".abajo")[:top], "la franja tapa el número de PF"
-    assert_in_delta etiqueta[:width], franja[:width], 1, "la franja va de borde a borde"
+    # C34 · Enmarcada y no rellena: va a todo el ancho de adentro, sin tocar
+    # el borde del papel (el marco se cortaría).
+    assert_in_delta etiqueta[:width] - 2 * 0.16 * 96, franja[:width], 1, "la franja va a todo el ancho"
+    assert_equal "rgba(0, 0, 0, 0)", page.evaluate_script("getComputedStyle(document.querySelector('.franja')).backgroundColor"),
+                 "sin relleno negro: *una torta negra, mucha tinta*"
     assert_operator franja[:top], :>, etiqueta[:top] + etiqueta[:height] * 0.3, "la franja quedó arriba, no en el medio"
   end
 
