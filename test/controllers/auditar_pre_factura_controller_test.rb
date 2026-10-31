@@ -151,6 +151,26 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body["ok"], response.parsed_body["mensaje"]
   end
 
+  # C34 · Lista 10 · F10: la etiqueta, y en la misma pestaña la orden.
+  test "F10 guarda como F9 y la etiqueta encadena la orden impresa" do
+    con_hoja(hora: "14:30", fecha: 1.day.from_now.to_date.iso8601)
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), orden: true }, as: :json
+
+    data = response.parsed_body
+    assert data["ok"], data["mensaje"]
+    assert_includes data["imprimir_url"], "orden=1"
+    pf = PreFactura.find_by!(numero: data["numero"])
+    assert pf.notificar_at.present?, "F10 avisa como F9"
+
+    get data["imprimir_url"]
+    assert_includes response.body, pre_factura_path(pf, print: "true").to_json[1..-2]
+
+    get pre_factura_path(pf, print: "true")
+    assert_includes response.body, "window.print()"
+    assert_includes response.body, "Auditada por"
+  end
+
   # C31-17 · Lo que contestó «¿Cuántas etiquetas?» queda en la pre-factura, y
   # la etiqueta sale esas veces. Un número fuera de rango no rompe el guardado:
   # se lleva al tope.

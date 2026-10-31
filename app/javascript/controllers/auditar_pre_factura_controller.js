@@ -118,7 +118,7 @@ export default class extends Controller {
     // C31-17 · Con «¿Cuántas etiquetas?» abierto, un F9 o F8 más imprime con
     // el número que está —el que pide el modal— y F2 no limpia nada.
     if (this.etiquetasModalTarget.open) {
-      if (e.key === "F9" || e.key === "F8") {
+      if (e.key === "F9" || e.key === "F8" || e.key === "F10") {
         e.preventDefault()
         this.confirmarEtiquetas()
       } else if (e.key === "F2") {
@@ -129,6 +129,9 @@ export default class extends Controller {
     if (e.key === "F9") {
       e.preventDefault()
       this.guardar()
+    } else if (e.key === "F10") {
+      e.preventDefault()
+      this.guardarConOrden()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.consolidar()
@@ -265,12 +268,22 @@ export default class extends Controller {
     this.guardar("consolidar")
   }
 
+  // C34 · Lista 10 · F10: lo de F9, y después de la etiqueta la orden —*"para
+  // Tegucigalpa, una sola tecla que imprima la orden y la etiqueta"*—.
+  guardarConOrden() {
+    this._pideOrden = true
+    this.guardar("avisar")
+  }
+
   // C31-17 · F9 y F8 ya no guardan de una: primero «¿Cuántas etiquetas?».
   guardar(modo = "avisar") {
     if (typeof modo !== "string") modo = "avisar"   // desde un clic llega el evento
     if (this._guardando) return
     if (this.finModalTarget.open) this.finModalTarget.close()
 
+    // Cada F9/F8 arranca sin la orden; solo F10 la pide (`guardarConOrden`).
+    this._conOrden = this._pideOrden === true
+    this._pideOrden = false
     // Sin nada escaneado no hay etiquetas que contar: sigue de una y el
     // servidor dice qué falta, como siempre.
     if (this.sesiones.length === 0) return this._guardar(modo, null)
@@ -316,6 +329,7 @@ export default class extends Controller {
     if (e?.type === "cancel") e.preventDefault()
     this.etiquetasModalTarget.close()
     this._modoPendiente = null
+    this._conOrden = false
     enfocar(this.codigoTarget)
   }
 
@@ -336,10 +350,11 @@ export default class extends Controller {
     // no, una lectura en vuelo se mezclaría con la pre-factura que se cierra.
     this._cola = this._cola.then(() => this._post(this.guardarUrlValue, {
       sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas,
-      confirmado
+      confirmado, orden: this._conOrden === true
     })
       .then((data) => {
         if (data.ok) {
+          this._conOrden = false
           this.dispatch("guardado")
           if (ventana) ventana.location = data.imprimir_url
           this._reiniciar()

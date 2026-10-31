@@ -40,7 +40,7 @@ class AuditarPreFacturaController < ApplicationController
     pre_factura = guardador(params[:modo]).call
     render json: {
       ok: true, numero: pre_factura.numero, pre_factura_url: pre_factura_path(pre_factura),
-      imprimir_url: imprimir_url(pre_factura),
+      imprimir_url: imprimir_url(pre_factura, orden: params[:orden].to_s == "true"),
       mensaje: "Pre-factura #{pre_factura.numero} guardada. " + cuando_avisa(pre_factura)
     }
   rescue GuardarPreFacturaAuditada::NecesitaConfirmacion => e
@@ -200,7 +200,9 @@ class AuditarPreFacturaController < ApplicationController
 
   # PR-P.3 · La etiqueta de entrega 4×6 —con la franja CONSOLIDANDO si F8 la
   # dejó así—. Imprime y se cierra sola (`?print=true`).
-  def imprimir_url(pre_factura)
-    etiqueta_entrega_pre_factura_path(pre_factura, print: true)
+  # C34 · Lista 10 · F10: después de la etiqueta, la orden, en la misma
+  # pestaña (un gesto alcanza para un popup, no para dos).
+  def imprimir_url(pre_factura, orden: false)
+    etiqueta_entrega_pre_factura_path(pre_factura, print: true, **(orden ? { orden: 1 } : {}))
   end
 end

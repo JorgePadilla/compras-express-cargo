@@ -193,6 +193,20 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_selector "[data-auditar-pre-factura-target='etiquetasModal'][open]", text: "Va para Humuya TGU", wait: 5
   end
 
+  # C34 · Lista 10 · *"Para Tegucigalpa, una sola tecla que imprima la orden y
+  # la etiqueta"* — *"buen punto, que creemos F10"*.
+  test "F10 pregunta cuántas etiquetas y abre la etiqueta que encadena la orden" do
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+    escanear @qr
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    nueva = cuantas_etiquetas(:f10, esperadas: 1)
+    hasta_que("F10 no guardó") { PreFactura.where(auditado_por: @user).where.not(notificar_at: nil).exists? }
+    within_window(nueva) { assert_includes current_url, "orden=1" }
+  end
+
   # C31-17 · *"Cuántas etiquetas el F9"*: se cambia el número, sale con eso
   # —una por bolsa, «i de N»— y queda guardado para reimprimir.
   test "F9 pregunta cuántas etiquetas: se cambia a 3 y salen 3" do

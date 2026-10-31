@@ -28,6 +28,11 @@
       <p class="text-gray-500">Fecha de Trabajo</p>
       <p class="font-medium"><%= @pre_factura.fecha_trabajo&.strftime("%d/%m/%Y") || "—" %></p>
       <%# C21-10: el manifiesto que se trabajó. Antes se tipeaba en las notas. %>
+      <%# C34 · Lista 13 · Quién la auditó: `auditado_por_id` ya se guardaba. %>
+      <% if @pre_factura.auditado_por %>
+        <p class="text-gray-500 mt-2">Auditada por</p>
+        <p class="font-medium"><%= @pre_factura.auditado_por.nombre %></p>
+      <% end %>
       <p class="text-gray-500 mt-2">Manifiesto</p>
       <p class="font-medium font-mono">
         <% if @pre_factura.manifiesto %>
@@ -111,3 +116,14 @@
 </div>
 
 <%= render "shared/bitacora", record: @pre_factura, label: "Pre-Factura" %>
+
+<%# C34 · Lista 10 · Con `?print=true` —F10 la trae después de la etiqueta—
+    se imprime sola y la pestaña se cierra, como las etiquetas. %>
+<% if params[:print] == "true" %>
+  <script>
+    window.addEventListener("load", function () {
+      window.addEventListener("afterprint", function () { window.close() }, { once: true })
+      window.print()
+    })
+  </script>
+<% end %>

@@ -23,12 +23,15 @@ import { Controller } from "@hotwired/stimulus"
 //   F6  → Editar (entrar a edit)
 //   F8  → Guardar: y también finalizar, confirmar, aplicar  (antes F10)
 //   F9  → Imprimir, y «hacer algo **e imprimir**»
+//   F10 → Guardar e imprimir **la orden y la etiqueta** (auditar pre-factura,
+//         C34 lista 10: *"buen punto, que creemos F10"*)
 //   F11 → Finalizar la sesión de /etiquetar (la eligió Yusef, `C22-02`)
 //
 // **Cambia `C23-13`**, que había ordenado la app leyendo lo que hacía —F7
 // nuevo, F8 Excel, F10 guardar— y que esta hoja corrige con el uso de ellos:
 // F8 deja de ser Excel (**el Excel queda sin tecla**, `RP-75`), F10 y F7
-// quedan libres. Lo demás no se movió.
+// quedan libres. Lo demás no se movió. F10 se volvió a tomar el 2026-10-31,
+// para una sola cosa: la orden y la etiqueta juntas.
 //
 // `C23-13` sigue valiendo en lo otro que dejó: **F4 y F9 imprimen las dos**
 // —F4 el documento de la pantalla (el manifiesto, el Warehouse Receipt), F9 el
