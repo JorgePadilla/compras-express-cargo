@@ -59,6 +59,6 @@ class EtiquetaPlantilla < ApplicationRecord
       tipo_envio: TipoEnvio.new(codigo: "exp", nombre: "EXPRESS"),
       proveedor: Proveedor.new(codigo: "AMZ", tipo: "entrega_personal"),
       user: User.new(iniciales: "DM", nombre: "Digitador Miami")
-    )
+    ).tap { |p| p.pre_alerta_en_etiqueta = "PA-000123" } # C34 · Lista 11: la más llena lleva PA
   end
 end

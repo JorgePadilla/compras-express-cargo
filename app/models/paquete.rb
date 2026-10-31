@@ -1021,6 +1021,17 @@ class Paquete < ApplicationRecord
     GrupoDeUnion.de(self)
   end
 
+  # C34 · Lista 11 · El número de la pre-alerta **consolidada** del paquete,
+  # para la etiqueta de Miami. El de muestra del editor lo trae puesto
+  # (`EtiquetaPlantilla.paquete_de_muestra`): sin persistir no hay qué buscar.
+  attr_writer :pre_alerta_en_etiqueta
+
+  def pre_alerta_en_etiqueta
+    return @pre_alerta_en_etiqueta if defined?(@pre_alerta_en_etiqueta)
+
+    @pre_alerta_en_etiqueta = (GrupoDeUnion.pre_alerta_consolidada_de(self)&.numero_documento if persisted?)
+  end
+
   # C26-03 · Medido, y sin grupo, o con el grupo completo, cerrado (se
   # factura aparte) o con la excepción de «facturar lo que hay» sellada.
   #
