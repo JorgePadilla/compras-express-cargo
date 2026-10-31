@@ -200,7 +200,8 @@ export default class extends conEnterAvanza(Controller) {
       // pesar el nuevo y apretar F9 guardaba **los dos**: dos etiquetas y
       // dos volúmenes cobrados por las mismas cajas.
       this._mesa.push(...data.hermanas.filter((h) => !this._mesa.some((p) => p.id === h.id)))
-      this._reemplazaSesion = data.remedir_tanda.sesion
+      // C34-05 · Del consolidado vienen todas sus tandas; se reemplazan todas.
+      this._reemplazaSesiones = data.remedir_tanda.sesiones || [ data.remedir_tanda.sesion ]
       this._volumenes = []
       this._anteriores = data.remedir_tanda.volumenes || []
       this._pintar(data)
@@ -659,7 +660,7 @@ export default class extends conEnterAvanza(Controller) {
   _cuentaDelGrupo(g) {
     const enTanda = new Set(this._idsDeLaTanda())
     const enMesa = (c) => !!(c.id && enTanda.has(c.id))
-    const seRemide = (c) => !!(this._reemplazaSesion && c.sesion === this._reemplazaSesion)
+    const seRemide = (c) => !!(this._reemplazaSesiones && this._reemplazaSesiones.includes(c.sesion))
     const medidaAntes = (c) => c.estado === "medida" && !enMesa(c) && !seRemide(c)
     return { enMesa, cajasEnMesa: g.cajas.filter(enMesa).length,
              medidasAntes: g.cajas.filter(medidaAntes).length,
@@ -830,7 +831,7 @@ export default class extends conEnterAvanza(Controller) {
 
     this._mesa = this._mesa.filter((p) => p.id !== id)
     this._saltados = this._saltados.filter((s) => s !== id)
-    if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesion = null; this._anteriores = [] }
+    if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesiones = null; this._anteriores = [] }
     this._repintar()
     this.codigoTarget.focus()
   }
@@ -935,7 +936,7 @@ export default class extends conEnterAvanza(Controller) {
       return
     }
 
-    const cuerpo = { paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
+    const cuerpo = { paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesiones: this._reemplazaSesiones || [],
                      saltar_manifiesto: this._saltados }
     if (this._avisarSueltos(cuerpo)) return
 
@@ -1210,7 +1211,7 @@ export default class extends conEnterAvanza(Controller) {
   _vaciarTanda() {
     this._paquete = null
     this._grupo = null
-    this._reemplazaSesion = null
+    this._reemplazaSesiones = null
     this._anteriores = []
     this._yaCompleto = false
     this._mesa = []
