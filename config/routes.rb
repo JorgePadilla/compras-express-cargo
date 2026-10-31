@@ -264,6 +264,8 @@ Rails.application.routes.draw do
     member do
       post :escanear
       patch :finalizar
+      # C34-08 · La hora del aviso a los clientes, en el interno.
+      patch :hora_aviso
       # C30-09 · La hoja del manifiesto, desde la lista: *"lo voy a querer
       # imprimir para darle al oficio"*.
       get :documento

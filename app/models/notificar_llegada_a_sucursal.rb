@@ -53,6 +53,23 @@ class NotificarLlegadaASucursal
     true
   end
 
+  # C34-08 · La hora la pone **quien recibe**: *"llegan 200 paquetes a Alexis,
+  # no va a estar el sistema notificándole en el acto los 200… ¿a qué hora es
+  # lo notificado? Tal hora"*. Si la puso (`aviso_llegada_at`), ni la ventana
+  # ni el cierre avisan antes: avisa este barrido, que corre cada minuto en
+  # `HacerDisponiblesProgramadasJob`. Si la corre, el aviso se corre con ella.
+  # Sin hora puesta, todo sigue como antes: la ventana y el cierre.
+  def self.barrer(ahora = Time.current)
+    Manifiesto.where(tipo: "interno", aviso_llegada_at: (ahora - 3.days)..ahora).find_each.sum do |m|
+      new(m).call
+    end
+  end
+
+  # ¿Ya es hora? Sin hora puesta, sí (los manifiestos de antes).
+  def self.hora_de_avisar?(manifiesto, ahora = Time.current)
+    manifiesto.aviso_llegada_at.nil? || manifiesto.aviso_llegada_at <= ahora
+  end
+
   def initialize(manifiesto)
     @manifiesto = manifiesto
   end
@@ -65,8 +82,29 @@ class NotificarLlegadaASucursal
     return 0 unless @manifiesto.tipo_interno? && @manifiesto.sucursal_entrega
 
     avisados = 0
+    llegados = paquetes_llegados
 
-    paquetes_llegados.group_by(&:cliente).each do |cliente, paquetes|
+    # C34-08 · La pre-factura que F9 dejó esperando la sucursal: el aviso es
+    # **el de siempre** —la pre-factura disponible, con su monto—, cuando
+    # llegaron todas sus cajas. La que llegó a medias espera al resto.
+    pre_facturas_que_esperan(llegados).each do |pf|
+      cajas = pf.paquetes.to_a
+      next unless cajas.all? { |c| c.estado == "disponible_entrega" && llego?(c) }
+
+      if pf.cliente&.email.present?
+        PreFacturaMailer.disponible(pf).deliver_later
+        pf.update_columns(notificado_at: Time.current)
+      else
+        pf.update_columns(notificado_at: Time.current,
+                          notificacion_error: "#{Time.current.strftime('%d/%m/%Y %H:%M')} · El cliente no tiene correo: llegó a la sucursal sin avisarle.")
+      end
+      Paquete.where(id: cajas.map(&:id)).update_all(llegada_notificada_at: Time.current)
+      avisados += 1
+    end
+    de_pre_facturas = PreFactura.where(id: llegados.filter_map(&:pre_factura_id)).where.not(espera_llegada_at: nil).pluck(:id).to_set
+    llegados = llegados.reject { |p| de_pre_facturas.include?(p.pre_factura_id) }
+
+    llegados.group_by(&:cliente).each do |cliente, paquetes|
       next if cliente.nil? || cliente.email.blank?
 
       LlegadaASucursalMailer.disponible(cliente, paquetes, @manifiesto.sucursal_entrega)
@@ -84,5 +122,18 @@ class NotificarLlegadaASucursal
   # Los que llegaron y todavía no fueron avisados — por ningún camino.
   def paquetes_llegados
     @manifiesto.paquetes.where(estado: "disponible_entrega", llegada_notificada_at: nil).includes(:cliente).to_a
+  end
+
+  private
+
+  def pre_facturas_que_esperan(paquetes)
+    PreFactura.where(id: paquetes.filter_map(&:pre_factura_id).uniq, notificado_at: nil)
+              .where.not(espera_llegada_at: nil).includes(:cliente, :paquetes).to_a
+  end
+
+  # Está donde retira: lo que el interno escribió al recibirla.
+  def llego?(caja)
+    retira = caja.sucursal || caja.cliente&.sucursal_retiro || Sucursal.para_cliente_nuevo
+    caja.sucursal_actual_id.present? && caja.sucursal_actual_id == retira&.id
   end
 end
