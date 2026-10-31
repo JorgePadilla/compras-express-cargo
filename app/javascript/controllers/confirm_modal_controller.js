@@ -35,7 +35,7 @@ export default class extends Controller {
     }
   }
 
-  ask(message, { title = "Confirmar", confirmLabel = "Confirmar", cancelLabel = "Cancelar", danger = true } = {}) {
+  ask(message, { title = "Confirmar", confirmLabel = "Confirmar", cancelLabel = "Cancelar", danger = true, foco = "cancelar" } = {}) {
     this.titleTarget.textContent = title
     this.messageTarget.textContent = message
     this.confirmBtnTarget.textContent = confirmLabel
@@ -61,7 +61,10 @@ export default class extends Controller {
     this._previo = document.activeElement
     this.rootTarget.classList.remove("hidden")
     // Focus the cancel button by default to avoid accidental confirms.
-    setTimeout(() => this.cancelBtnTarget.focus(), 0)
+    // C34-02 · Salvo lo que no se puede romper con un Enter —finalizar un
+    // manifiesto—: ahí el foco va a «Confirmar» (`foco: "confirmar"`).
+    const enfocar = foco === "confirmar" ? this.confirmBtnTarget : this.cancelBtnTarget
+    setTimeout(() => enfocar.focus(), 0)
 
     return new Promise((resolve) => {
       this._pending = resolve

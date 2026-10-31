@@ -13697,6 +13697,18 @@ Lo que pidieron:
   a la alta temporada"*. El catálogo existe (`motivos_envio_politica`). Lo que
   falta es el texto de las razones, y lo carga el equipo.
 
+▶ **2026-10-31 (`PR-C34.13`).**
+- «Empacar sin escanear» bajó al escaneo, debajo de la pistola. Se repinta con
+  cada escaneo, así que su número baja a medida que se escanea.
+- El confirm de «Solo Finalizar» y de «Finalizar e Imprimir» abre con el foco
+  en **Confirmar**: Enter finaliza. Finalizar se corrige con «Editar»
+  (`C30-06`), no es borrar. Los confirm de borrar siguen abriendo en Cancelar
+  (PR-A11Y.1).
+- «Finalizar e imprimir» **ya estaba arriba**, en el bloque de acciones de
+  debajo del encabezado (además del de abajo). Falta ver en staging qué fue lo
+  que Yusef no vio. Sacar y meter después de finalizado ya está (`C30-06`):
+  falta probarlo con él.
+
 #### C34-03 · «Empacar sin escanear» y el tracking de dos cajas (min 90–96) — ❓ a reproducir
 
 Un tracking dividido en dos cajas (un warehouse, dos paquetes). Se mandó una
@@ -14157,7 +14169,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | # | Qué | Estado |
 |---|---|---|
 | `C34-01` | Reunión de una hora con el equipo, los martes a las 4 | 📄 Operativo |
-| `C34-02` | Manifiesto de Miami: «empacar sin escanear» abajo, «finalizar e imprimir» arriba, Enter en el confirm, pallets de Tegucigalpa, metas | ❌ Botones y confirm. ❓ `RP-110` pallets. Sacar/meter después de finalizado ya está (`C30-06`), falta probarlo |
+| `C34-02` | Manifiesto de Miami: «empacar sin escanear» abajo, «finalizar e imprimir» arriba, Enter en el confirm, pallets de Tegucigalpa, metas | ◐ ▶ **2026-10-31** (`PR-C34.13`): «empacar sin escanear» junto al escaneo, y Enter confirma al finalizar. «Finalizar e imprimir» ya estaba arriba. ❓ `RP-110` pallets; metas sin pedido concreto |
 | `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ✅ ▶ **2026-10-31** (`PR-C34.12`): reproducido; era la recepción en Honduras. La hermana sin caja ahora llega con la caja de su hermana |
 | `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
 | `C34-05` | El consolidado que se mide en partes: sumar al anterior | ✅ ▶ **2026-10-31** (`PR-C34.4`): medir de nuevo todo junto también después de F8; la consolidando se anula y queda un solo peso |
