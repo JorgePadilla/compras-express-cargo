@@ -106,6 +106,18 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_includes json["notas"].map { |n| n["etiqueta"] }, "Notas de consolidación"
   end
 
+  # C34-10 · La nota permanente de medición: *"si va a faltar aquí agregar
+  # ahora notas medición"*. El medidor la ve junto a la de pre-factura.
+  test "la nota de medición del cliente sale en la PESA, con su área" do
+    clientes(:juan).update!(notas_medicion: "Siempre pesar con la caja abierta", notas_honduras: "Avisar antes")
+
+    escanear(@paquete.tracking)
+
+    notas = json["notas"].map { |n| n.values_at("etiqueta", "detalle", "texto") }
+    assert_includes notas, [ "Nota permanente", "Medición", "Siempre pesar con la caja abierta" ]
+    assert_includes notas, [ "Nota permanente", "Honduras", "Avisar antes" ]
+  end
+
   test "un cliente sin notas no trae ninguna" do
     escanear(@paquete.tracking)
 

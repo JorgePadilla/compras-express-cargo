@@ -753,7 +753,8 @@ CREATE TABLE public.clientes (
     clave_actualizada_at timestamp(6) without time zone,
     codigo_digitos text GENERATED ALWAYS AS (ltrim(regexp_replace((codigo)::text, '\D'::text, ''::text, 'g'::text), '0'::text)) STORED,
     busqueda_codigo text GENERATED ALWAYS AS (translate((codigo)::text, 'áéíóúüñÁÉÍÓÚÜÑ'::text, 'aeiouunAEIOUUN'::text)) STORED,
-    busqueda_nombre text GENERATED ALWAYS AS (translate((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text), 'áéíóúüñÁÉÍÓÚÜÑ'::text, 'aeiouunAEIOUUN'::text)) STORED
+    busqueda_nombre text GENERATED ALWAYS AS (translate((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text), 'áéíóúüñÁÉÍÓÚÜÑ'::text, 'aeiouunAEIOUUN'::text)) STORED,
+    notas_medicion text
 );
 
 
@@ -8897,6 +8898,7 @@ ALTER TABLE ONLY public.manifiesto_sucursales_entrega
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261031120000'),
 ('20261025190000'),
 ('20261025180000'),
 ('20261013200000'),
