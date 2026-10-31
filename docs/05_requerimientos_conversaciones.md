@@ -14001,6 +14001,25 @@ Las dos reuniones se revisaron para esto: en C34 no se pidió otro tamaño, y la
 transcripción de C33 no está en el repo (en `docs/05` no hay pedidos de
 tamaño). ❓ La foto con la letra marcada.
 
+▶ **2026-10-31, más tarde (Jorge):** *"la etiqueta de pre-factura tiene una
+torta negra, mucha tinta… revisá una forma para no poner ese montón de tinta,
+y si debería tener más información"*. Lo que cambió:
+- **Ni el «VA PARA» ni la franja de consolidando van rellenos de negro.** Son un
+  **marco grueso** con la letra negra sobre blanco. Se lee igual de lejos y
+  gasta una fracción de la cinta. La franja baja de 30 a 26 pt, para que el
+  marco quepa en el alto que tenía (lo mide `etiqueta_entrega_cabe_test`).
+  Cambia la forma de `C30-18` («negro sólido con letra blanca»), no lo que
+  Yusef pidió: *"así en medio, que estorbe"*.
+- **Más información: el número de la pre-alerta** (`PA-000120`) en el renglón
+  de abajo, al lado de «1 de N». Es el mismo dato de la etiqueta del volumen
+  (`C29-15`: *"solo el número de pre-alerta. PA, tal"*), y es con lo que se
+  agrupa al entregar.
+- **No se agregó**:
+  - el monto: puede cambiar con un PIN antes de facturar, y la bolsa va al
+    estante a la vista;
+  - las notas de un toque: `C34-10` dice que van en la pre-factura del
+    correo, *"no en la calcomanía"*.
+
 **Corregir antes del aviso.** Yusef preguntó qué pasa si se manda una orden y
 se corrige a los cinco minutos. Jorge: *"el sistema agarra la última… no le
 caen dos veces al cliente"*. Lo contó con un caso del sistema viejo: un «iPhone

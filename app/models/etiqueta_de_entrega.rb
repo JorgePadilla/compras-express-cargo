@@ -65,6 +65,14 @@ class EtiquetaDeEntrega
 
   def numero = pre_factura.numero
 
+  # C34 · La pre-alerta de lo que va adentro, como en la etiqueta del volumen
+  # (`Bulto#pre_alerta_en_etiqueta`, C29-15: *"solo el número de pre-alerta.
+  # PA, tal"*). Es con lo que se agrupa: quien entrega una bolsa de un
+  # consolidado sabe a qué pre-alerta pertenece sin escanear.
+  def pre_alerta
+    bultos.lazy.filter_map(&:pre_alerta_en_etiqueta).first
+  end
+
   def cliente = pre_factura.cliente
 
   def cliente_codigo = cliente&.codigo
@@ -117,7 +125,7 @@ class EtiquetaDeEntrega
   def sucursal_nombre = sucursal&.nombre
 
   # C34-08 · No retira en la de por defecto (San Pedro): la etiqueta dice
-  # «VA PARA», en negro.
+  # «VA PARA», enmarcado.
   def otra_sucursal?
     sucursal.present? && sucursal != Sucursal.para_cliente_nuevo
   end
