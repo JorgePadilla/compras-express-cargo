@@ -71,8 +71,19 @@
     .arriba { display: flex; gap: .14in; align-items: flex-start; }
     .izq { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
     .der { flex: 0 0 2.2in; width: 2.2in; display: flex; flex-direction: column; align-items: center; }
+    /* C34-08 · *"Esa etiqueta, hay que traerla porque tenemos que modificar el
+       tamaño de la letra"*, dicho al hablar de adónde va. Cuando **no** es
+       San Pedro, el bloque sale en negro, como la franja de abajo: «VA PARA
+       TEGUCIGALPA». La nota «dejar en San Pedro» nadie la leyó; el negro no
+       se pasa por alto. El rótulo es más grande ahí (10 pt) y queda en 7 en
+       San Pedro, con el mismo alto de renglón (mayúsculas, sin colas): el alto
+       no da para más sin achicar la sucursal, que es lo
+       que Yusef pidió «grandísimo». Sin foto de Yusef todavía: es la lectura
+       del audio. */
     .rotulo { font-size: 7pt; font-weight: 700; letter-spacing: .08em; line-height: 1.2; }
     .sucursal { font-size: 42pt; font-weight: 900; line-height: 1.15; max-height: 2.35em; overflow: hidden; text-transform: uppercase; }
+    .izq.otra .rotulo { font-size: 10pt; font-weight: 900; line-height: .84; }
+    .izq.otra .rotulo, .izq.otra .sucursal { background: #000; color: #fff; padding: 0 .06in; }
     .tipo     { font-size: 34pt; font-weight: 900; line-height: 1.1; overflow: hidden; }
     .cliente-codigo { font-size: 26pt; font-weight: 700; font-family: "Courier New", monospace; line-height: 1.1; overflow: hidden; }
     .nombre   { font-size: 20pt; font-weight: 700; line-height: 1.1; max-height: 2.25em; overflow: hidden; }

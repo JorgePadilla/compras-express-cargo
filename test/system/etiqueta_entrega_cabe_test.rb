@@ -76,6 +76,32 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
     assert_cabe
   end
 
+  # C34-08 · Otra sucursal: «VA PARA», en negro. La peor otra vez —dos
+  # renglones a tamaño completo, nombre en dos, la franja— y tiene que caber
+  # con el rótulo más grande.
+  test "otra sucursal dice VA PARA en negro, y cabe a tamaño completo con la franja" do
+    clientes(:juan).update_columns(nombre: "María Fernanda", apellido: "Rodríguez Castellanos")
+    # A 42pt «HUMUYA» / «TGU», como el caso de San Pedro: el negro no achica.
+    flete(paquete(sucursal: sucursales(:humuya_tgu)), 999.99)
+
+    con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
+
+    assert_selector ".izq.otra .rotulo", text: "VA PARA"
+    assert_equal "rgb(0, 0, 0)", page.evaluate_script("getComputedStyle(document.querySelector('.izq.otra .sucursal')).backgroundColor")
+    assert_operator caja_de(".sucursal")[:height], :>, puntos(".sucursal") * 1.5, "la sucursal no quedó en dos renglones"
+    assert_equal 42, (puntos(".sucursal") * 72 / 96).round, "la sucursal se achicó"
+    assert_cabe
+  end
+
+  test "San Pedro sigue diciendo RETIRA EN, sin el negro" do
+    flete(paquete, 1)
+
+    visit etiqueta_entrega_pre_factura_path(@pf)
+
+    assert_selector ".rotulo", text: "RETIRA EN"
+    assert_no_selector ".izq.otra"
+  end
+
   test "va acostada: 6 de ancho por 4 de alto" do
     flete(paquete, 1)
 

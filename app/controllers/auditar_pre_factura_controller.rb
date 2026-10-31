@@ -148,6 +148,7 @@ class AuditarPreFacturaController < ApplicationController
   def tanda_json(resultado)
     datos_de_tanda(resultado.sesion, resultado.bultos, resultado.cajas)
       .merge(aviso_ndem: resultado.aviso, grupo_aviso: resultado.grupo_aviso,
+             sucursal_aviso: resultado.sucursal_aviso, cliente_aviso: resultado.cliente_aviso,
              lineas: vista_previa(sesiones + [ resultado.sesion ]))
   end
 

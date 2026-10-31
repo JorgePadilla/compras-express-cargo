@@ -13938,6 +13938,25 @@ le diga para dónde va… cuando escanean el QR de peso… y al final, cuando
 impriman la etiqueta también"*. Y de esa etiqueta: *"hay que traerla, porque
 tenemos que modificar el tamaño de la letra"*. ❓ No se dice cuál letra.
 
+▶ **2026-10-31 (`PR-C34.7`).** El modal y la etiqueta, con la lectura del
+audio, hasta que llegue la foto de la etiqueta que Yusef dijo que había que
+traer:
+- **Al escanear el volumen en auditar**: si el cliente no retira en San Pedro,
+  un modal rojo con el sonido de sucursal de Miami (`C29-07`), «Va para Humuya
+  TGU: este cliente retira allá». No traba la pre-factura.
+- **Al imprimir** (F9/F8, «¿Cuántas etiquetas?»): el mismo «Va para…», en rojo,
+  arriba del número.
+- **La etiqueta de entrega**: el bloque de la sucursal sale **en negro** con
+  «VA PARA», como la franja de consolidando, y el rótulo sube de 7 a 10 pt.
+  San Pedro sigue con «RETIRA EN». No se agrandó nada más: el alto de la 6×4
+  está justo, y agrandar la sucursal o las cifras achicaba lo que Yusef pidió
+  «grandísimo» en `C32-02` (lo mide `etiqueta_entrega_cabe_test`). Las cifras
+  quedan chicas, como dijo en `C31-17`.
+
+Las dos reuniones se revisaron para esto: en C34 no se pidió otro tamaño, y la
+transcripción de C33 no está en el repo (en `docs/05` no hay pedidos de
+tamaño). ❓ La foto con la letra marcada.
+
 **Corregir antes del aviso.** Yusef preguntó qué pasa si se manda una orden y
 se corrige a los cinco minutos. Jorge: *"el sistema agarra la última… no le
 caen dos veces al cliente"*. Lo contó con un caso del sistema viejo: un «iPhone
@@ -14053,8 +14072,8 @@ personal se va a hacer.
 | 5 | En la etiqueta de pre-factura, elegir «unir» o «consolidando» sin marcadores; F8 = consolidando | *"Ya lo hiciste"* | F8 imprime con la franja CONSOLIDANDO | ✅ |
 | 6 | Precio especial por proveedor (Shein, Temu, doTERRA, farmacia) con una tecla | Sin comentario | La tarifa ya cae sola por proveedor: cliente → proveedor → categoría → lista (`Tarifa`, l. 142). No hay tecla | ✅ Automático. La tecla no hace falta salvo que Yusef diga otra cosa |
 | 7 | Agregar cobro CK/CKM y «pagado en Miami» a los precios del sistema | **Yusef lo quiere.** Cuando no se reempaca, se le cobra al cliente como sin reempaque, y hoy el personal teclea el precio y se equivoca: *"Jorge tiene 90 en aéreo y 70 en marítimo, y ellos ponen 90"*. Pide que, con el PIN de autorización, el sistema *"jale cuál es la tarifa que tiene Jorge y le ponga esa tarifa en CKM"*. Jorge: *"la que está en el perfil"* | No hay forma de agregar una línea a la pre-factura. El PIN solo cambia precio, peso, descuento o borra. El flete de un paquete CKM ya usa la tarifa del cliente. «Pagado en Miami» es automático (US$1) | ❌ Falta: «cobrar como sin reempaque», con PIN, que tome la tarifa CKA/CKM del cliente (`RP-115`) |
-| 8 | Alerta al iniciar la pre-factura si el cliente tiene tarifa especial o no paga mínimo | *"Podemos poner ahí: cliente no paga mínimo"*, al escanear el QR de peso | Solo avisa del prepagado | ❌ Falta. Aprobado |
-| 9 | Alerta de que el cliente es de Tegucigalpa al iniciar la pre-factura o al poner el código | Sí. Es el modal de `C34-08` | El aviso rojo de sucursal está solo en Miami | ❌ Falta. Aprobado |
+| 8 | Alerta al iniciar la pre-factura si el cliente tiene tarifa especial o no paga mínimo | *"Podemos poner ahí: cliente no paga mínimo"*, al escanear el QR de peso | Solo avisa del prepagado | ✅ ▶ **2026-10-31** (`PR-C34.7`): la franja dorada lo dice al escanear el volumen (tarifa propia, sin mínimo, solo volumétrico) |
+| 9 | Alerta de que el cliente es de Tegucigalpa al iniciar la pre-factura o al poner el código | Sí. Es el modal de `C34-08` | El aviso rojo de sucursal está solo en Miami | ✅ ▶ **2026-10-31** (`PR-C34.7`): modal rojo al escanear el volumen, otra vez al imprimir, y «VA PARA» en negro en la etiqueta |
 | 10 | Para Tegucigalpa, una sola tecla que imprima la orden y la etiqueta | *"Buen punto, que creemos F10"*. La hoja va con la carga *"como comprobación de qué es lo que va"* | F8/F9 imprimen solo la etiqueta. La orden es «Ver imprimible» aparte | ❌ Falta. Aprobado |
 | 11 | Que las etiquetas de recepción lleven el número de pre-alerta, no «agrupado» | Yusef: *"es hasta bueno, mejor, por favor… ayudaría para control visual, no tiene que ser tan grande"*. Jorge: *"no tengo espacio ahí… te lo voy a intentar"* | La etiqueta de volumen de medición ya lleva «PA-…». La de recepción de Miami no tiene ese campo | ❌ Falta, si cabe. En la Dymo hay que medir, no adivinar |
 | 12 | La guía de trabajo de «Preparar pre-factura» la crea el supervisor y les asigna a los demás, para que todos tengan la misma fecha | *"Estoy a punto de decirte que no, pero dame una buena razón."* — *"Porque copian lo que quieren y ponen lo que quieren."* No se cierra | La hoja es por usuario, en la sesión | ❓ `RP-116` |

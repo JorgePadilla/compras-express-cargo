@@ -116,6 +116,12 @@ class EtiquetaDeEntrega
 
   def sucursal_nombre = sucursal&.nombre
 
+  # C34-08 · No retira en la de por defecto (San Pedro): la etiqueta dice
+  # «VA PARA», en negro.
+  def otra_sucursal?
+    sucursal.present? && sucursal != Sucursal.para_cliente_nuevo
+  end
+
   # La fecha **en que se le entrega** —*"no la que se entregó, sino la que
   # es"*—: la hora del aviso cuando exista (`notificar_at`, PR-P.2), y si no,
   # la fecha de trabajo de la pre-factura. Con hora solo cuando la hay.
