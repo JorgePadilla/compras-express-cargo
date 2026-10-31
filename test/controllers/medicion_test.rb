@@ -59,7 +59,7 @@ class MedicionTest < ActionDispatch::IntegrationTest
 
     textos = json["notas"].map { |n| n["texto"] }
     assert_includes textos, "Avisar antes de entregar"
-    assert_includes textos, "Todo en una caja"
+    assert_not_includes textos, "Todo en una caja", "C34-09 · la nota del cliente en la pre-alerta es para Miami"
     assert_includes textos, "Vino mojada"
     assert_not_includes textos, "Revisar el contenido"
     assert_not_includes textos, "Paga con tarjeta"
@@ -70,15 +70,19 @@ class MedicionTest < ActionDispatch::IntegrationTest
   # repetidas… porque yo lo escribí a uno"*. Miami le **copia** la nota de grupo
   # a la caja al vincularla (`notas_consolidacion`, PR-D2), y salía dos veces:
   # como «Nota especial» y como «Notas de consolidación».
-  test "la nota de grupo copiada a la caja sale una sola vez, con el número de su pre-alerta" do
+  #
+  # C34-09 · Y desde el 2026-10-31 no sale ninguna de las dos: lo que el cliente
+  # escribió en la pre-alerta es para Miami. Yusef: *"que le aparezca a Miami
+  # nada más"*. La copia tampoco entra por la puerta de atrás.
+  test "la nota de grupo, y su copia en la caja, no salen en medición" do
     pa, = grupo_de_tres(@paquete)
     pa.update!(notas_grupo: "test")
     @paquete.update_column(:notas_consolidacion, "test")
+    @paquete.pre_alerta_paquetes.first&.update!(instrucciones: "revisarlo")
 
     escanear(@paquete.tracking)
 
-    assert_equal [ [ "Nota especial", pa.numero_documento, "test" ] ],
-                 json["notas"].map { |n| n.values_at("etiqueta", "detalle", "texto") }
+    assert_equal [], json["notas"]
   end
 
   # `link_tracking!` junta las notas de varias pre-alertas con un renglón en
@@ -95,7 +99,7 @@ class MedicionTest < ActionDispatch::IntegrationTest
     @paquete.update_column(:notas_consolidacion, "Todo en una caja\n\nFrágil")
 
     escanear(@paquete.tracking)
-    assert_equal [ "Todo en una caja", "Frágil" ].sort, json["notas"].map { |n| n["texto"] }.sort
+    assert_equal [], json["notas"], "C34-09 · las dos notas de grupo son para Miami, y la copia sobra"
 
     @paquete.update_column(:notas_consolidacion, "Todo en una caja, y que no la abran")
     escanear(@paquete.tracking)

@@ -51,17 +51,21 @@ class MedicionFocoYNotasTest < ApplicationSystemTestCase
     pa
   end
 
-  test "la nota de grupo sale una vez, aunque la caja la traiga copiada, y «Entendido» con el dedo devuelve la pistola" do
+  # C34-09 · La nota de grupo es para Miami: ni ella ni su copia en la caja
+  # salen acá. La nota permanente de pre-factura sí, una vez.
+  test "la nota de grupo no sale en medición, la permanente sale una vez, y «Entendido» con el dedo devuelve la pistola" do
+    clientes(:juan).update!(notas_honduras: "Avisar antes de entregar")
     primera = caja("1ZFOCO000000001")
     segunda = caja("1ZFOCO000000002")
-    pa = consolidado(primera, segunda, nota: "test")
+    consolidado(primera, segunda, nota: "prueba de alerta grupo")
 
     visit medicion_index_path
     escanear(primera.numero_recepcion)
 
     assert_selector "dialog[open]", text: "Notas del cliente", wait: 5
     assert_selector "[data-medicion-target='notasLista'] li", count: 1
-    assert_selector "[data-medicion-target='notasLista'] li", text: pa.numero_documento
+    assert_selector "[data-medicion-target='notasLista'] li", text: "Avisar antes de entregar"
+    assert_no_text "prueba de alerta grupo"
     within("dialog[open]") { click_on "Entendido" }
 
     # La segunda caja trae la misma nota: ni se abre el modal ni suma al botón.
