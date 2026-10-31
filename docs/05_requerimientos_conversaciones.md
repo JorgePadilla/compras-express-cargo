@@ -13971,6 +13971,19 @@ Es lo mismo de `C16-01` llevado un paso más allá: la instrucción del cliente 
 una **nota para quien recibe en Miami**. No es tarea, y no es para Honduras.
 Pantallas gemelas: el wizard del portal y la ficha del personal.
 
+▶ **2026-10-31 (`PR-C34.5`).**
+- Medición ya no muestra la instrucción del renglón ni la **nota de grupo** de
+  la pre-alerta. Lo de la nota de grupo es una lectura nuestra: el «prueba de
+  alerta grupo» de la pasada era esa nota, no una instrucción. Tampoco entra su
+  copia en el paquete (`notas_consolidacion`, PR-D2), salvo que alguien de
+  Miami la haya editado y diga otra cosa. Pre-factura no las mostraba.
+- /etiquetar las sigue mostrando, cada una con su título: «Instrucción para
+  Miami · <tracking>» y «Nota del grupo · PA-…».
+- El campo se llama «Instrucciones para Miami» en el wizard del portal, en la
+  pre-alerta del personal (alta y edición), en la ficha del paquete y en su
+  formulario.
+- La pregunta «¿quiere agrupar?» del wizard no se tocó.
+
 #### C34-10 · Las notas: una de medición, y frases de un toque en la pre-factura (min 18–24, 84–90)
 
 **En el cliente.** Hoy tiene `notas_miami`, `notas_honduras`, `notas_caja` y
@@ -14080,7 +14093,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ✅ ▶ **2026-10-31** (`PR-C34.3`): contaba dos veces el medido que volvía a la mesa; ahora es el total menos lo que falta, y lo medido antes se ve |
 | `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
-| `C34-09` | Instrucciones del cliente solo para Miami | ❌ Falta. Decidido |
+| `C34-09` | Instrucciones del cliente solo para Miami | ✅ ▶ **2026-10-31** (`PR-C34.5`): fuera de medición (también la nota de grupo); «Instrucciones para Miami» en portal y personal |
 | `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ❌ Falta. Las frases esperan `RP-113` |
 | `C34-11` | La pre-alerta que no se dejaba borrar | ❓ A reproducir |
 | Lista 7 | Cobrar como sin reempaque con la tarifa CKA/CKM del cliente, con PIN | ❌ Falta (`RP-115`) |

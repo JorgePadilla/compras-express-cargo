@@ -21,9 +21,11 @@ module PanelContextoHelper
   def notas_contexto_blocks(cliente:, paquete:, notas_especiales:, user:)
     blocks = []
 
-    # 1. Notas especiales — instrucciones que el cliente escribió en su pre-alerta.
-    Array(notas_especiales).each do |tracking, texto|
-      blocks << nota_block("Nota especial", texto, :navy, detalle: tracking)
+    # 1. Lo que el cliente escribió en su pre-alerta. C34-09 · Con el título de
+    #    dónde viene —*"y obviamente los títulos"*—: la instrucción de un
+    #    renglón o la nota del grupo. Sin título, «Nota especial».
+    Array(notas_especiales).each do |detalle, texto, etiqueta|
+      blocks << nota_block(etiqueta || "Nota especial", texto, :navy, detalle: detalle)
     end
 
     # 2. Notas permanentes del cliente — solo las del área del usuario, en

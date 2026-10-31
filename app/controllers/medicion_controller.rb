@@ -561,11 +561,30 @@ class MedicionController < ApplicationController
   # las del paquete—. El rol `medicion` ya leía `notas_honduras`, la columna de
   # pre-factura (`User::NOTAS_POR_ROL`), así que «no separarlas» es justamente
   # no inventar una columna.
+  # C34-09 · Sin lo que el cliente escribió en la pre-alerta —la instrucción
+  # de cada renglón y la nota de grupo—: eso es **para Miami**. Yusef, viendo
+  # «prueba de alerta grupo» y «revisarlo» en el modal de medición:
+  #
+  #   > "Conociendo a estos muchachos, van a estar pensando que lo tienen que
+  #   >  hacer… pierden el tiempo, agarran el paquete… y se atrasan."
+  #   > "— ¿Qué hago con instrucciones? — Que le aparezca a Miami nada más."
+  #
+  # Quedan las notas permanentes del área y las del paquete, que sí son de acá.
+  # /etiquetar las sigue mostrando (`PanelContextoController`).
+  #
+  # Se le pasan igual al helper y se sacan después: Miami le **copia** la nota
+  # de grupo al paquete (`notas_consolidacion`, PR-D2), y `sin_repetir` es el
+  # que reconoce esa copia (C30-10). Sin pasárselas, la nota del cliente
+  # volvía a entrar como «Notas de consolidación». Lo que alguien de Miami
+  # editó en la caja y dice otra cosa sí sale: para eso se editó.
+  DE_LA_PRE_ALERTA = [ "Instrucción para Miami", "Nota del grupo" ].freeze
+
   def notas_de(paquete)
     return [] if paquete.cliente.nil?
 
     helpers.notas_contexto_blocks(cliente: paquete.cliente, paquete: paquete,
                                   notas_especiales: notas_especiales_de(paquete), user: Current.user)
+           .reject { |n| n[:etiqueta].in?(DE_LA_PRE_ALERTA) }
            .map { |n| n.merge(clases: helpers.tono_nota_classes(n[:tono])) }
   end
 
@@ -578,8 +597,8 @@ class MedicionController < ApplicationController
                                 .where("pre_alerta_paquetes.paquete_id = :id OR UPPER(pre_alerta_paquetes.tracking) = :t",
                                        id: paquete.id, t: paquete.tracking.to_s.upcase)
                                 .includes(:pre_alerta).to_a
-    instrucciones = renglones.filter_map { |r| [ r.tracking, r.instrucciones ] if r.instrucciones.present? }
-    grupos = renglones.map(&:pre_alerta).uniq.filter_map { |pa| [ pa.numero_documento, pa.notas_grupo ] if pa.notas_grupo.present? }
+    instrucciones = renglones.filter_map { |r| [ r.tracking, r.instrucciones, "Instrucción para Miami" ] if r.instrucciones.present? }
+    grupos = renglones.map(&:pre_alerta).uniq.filter_map { |pa| [ pa.numero_documento, pa.notas_grupo, "Nota del grupo" ] if pa.notas_grupo.present? }
     instrucciones + grupos
   end
 

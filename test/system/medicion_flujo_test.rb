@@ -740,7 +740,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     assert_selector "dialog[open]", text: "Notas del cliente", wait: 5
     assert_selector "dialog[open]", text: "Llamar antes de entregar: trabaja de noche"
-    assert_selector "dialog[open]", text: "Meter todo en una sola caja"
+    # C34-09 · La nota de grupo es para Miami: no sale acá.
+    assert_no_selector "dialog[open]", text: "Meter todo en una sola caja"
     page.driver.browser.action.send_keys(:escape).perform
     assert_selector "dialog[open]", text: "Notas del cliente"
     page.driver.browser.action.send_keys(:enter).perform
@@ -751,8 +752,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     assert_no_selector "dialog[open]"
 
-    click_on "2 notas del cliente"
-    assert_selector "dialog[open]", text: "Meter todo en una sola caja", wait: 5
+    click_on "1 nota del cliente"
+    assert_selector "dialog[open]", text: "Llamar antes de entregar: trabaja de noche", wait: 5
   end
 
   test "sin notas no hay modal ni botón" do

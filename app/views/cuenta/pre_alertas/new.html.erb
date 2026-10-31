@@ -212,11 +212,11 @@
                       class="<%= clases_de_input %>"><%= h(params[:descripcion]) %></textarea>
           </label>
 
-          <%# Instrucciones Especiales del Paquete %>
+          <%# C34-09 · Instrucciones para Miami: es para quien recibe allá. %>
           <label class="block">
-            <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Instrucciones Especiales del Paquete", ayuda: "(opcional)") %></span>
+            <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Instrucciones para Miami", ayuda: "(opcional)") %></span>
             <textarea name="instrucciones" rows="2"
-                      placeholder="Instrucciones para el procesamiento del paquete..."
+                      placeholder="Lo que tienen que saber en Miami al recibir este paquete..."
                       class="<%= clases_de_input %>"><%= h(params[:instrucciones]) %></textarea>
           </label>
         </div>
