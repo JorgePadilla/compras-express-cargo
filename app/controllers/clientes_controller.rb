@@ -293,7 +293,7 @@ class ClientesController < ApplicationController
       :telefono, :telefono_whatsapp, :direccion, :ciudad, :sucursal_retiro_id,
       :departamento, :categoria_precio_id, :activo,
       :notas_miami, :notas_honduras,
-      :notas_caja, :notas_sac,
+      :notas_caja, :notas_sac, :notas_medicion,
       # PR-C6.41: los servicios donde se le cobra solo el volumétrico. Sin esta
       # línea el form guarda en silencio — los checks no dan error, simplemente
       # no pasa nada.

@@ -14010,6 +14010,15 @@ zapatos y compró un reloj… y es del cliente que no lee la descripción"*.
 También le sirven al que entrega: *"si él ve que va dentro de la caja"*. Las
 frases las da el equipo (`RP-113`).
 
+▶ **2026-10-31 (`PR-C34.6`).** `clientes.notas_medicion`, con su campo en la
+ficha («Notas Medición») y en el historial. La ven medición y admin. Medición
+**sigue** viendo `notas_honduras`, como decidió `C29-19` (*"de momento no las
+deberíamos de separar"*). Sale sola en el modal de notas de la PESA, con su
+área. Las tareas ya se ven en la ficha del cliente («Tareas pendientes del
+cliente», PR-9.b). Siguen abiertos el orden de los datos de contacto y las
+frases de un toque (`RP-113`). Las tareas **no** tienen un área «medición»:
+medición sigue viendo las de Honduras.
+
 #### C34-11 · La pre-alerta que no se dejaba borrar (min 12–18) — ❓ a reproducir
 
 > "Yo creé una, sólo era una y no me dejaba borrarla."
@@ -14094,7 +14103,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
 | `C34-09` | Instrucciones del cliente solo para Miami | ✅ ▶ **2026-10-31** (`PR-C34.5`): fuera de medición (también la nota de grupo); «Instrucciones para Miami» en portal y personal |
-| `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ❌ Falta. Las frases esperan `RP-113` |
+| `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ◐ ▶ **2026-10-31** (`PR-C34.6`): `notas_medicion` hecha. Falta ordenar la ficha, y las frases esperan `RP-113` |
 | `C34-11` | La pre-alerta que no se dejaba borrar | ❓ A reproducir |
 | Lista 7 | Cobrar como sin reempaque con la tarifa CKA/CKM del cliente, con PIN | ❌ Falta (`RP-115`) |
 | Lista 8, 9, 10, 11 | Aviso de tarifa especial / sin mínimo; aviso de Tegucigalpa; F10; número de pre-alerta en la etiqueta de recepción | ❌ Falta. Aprobados |
