@@ -125,7 +125,10 @@ class MedicionController < ApplicationController
     paquete = candidatas.find { |p| !en_tanda.include?(p.id) && p.medido_at.blank? } ||
               candidatas.find { |p| !en_tanda.include?(p.id) } ||
               candidatas.first
-    if paquete.pre_factura_id.present? || paquete.venta_id.present?
+    # C34-05 · Salvo la consolidando que se mide de nuevo todo junto: esa se
+    # anula al guardar (`MedirBulto#soltar_consolidando!`).
+    rehace = remedir? && se_rehace?(paquete)
+    if (paquete.pre_factura_id.present? || paquete.venta_id.present?) && !rehace
       return render json: { resultado: "en_pre_factura", paquete: datos_de(paquete),
                             mensaje: "#{codigo_de(paquete)} ya está en la pre-factura #{paquete.pre_factura&.numero}: " \
                                      "el peso se congeló ahí. No se mide desde acá." }
@@ -157,7 +160,9 @@ class MedicionController < ApplicationController
     # C31-12 · Lo de su nombre se registra pero **no se dice**. Yusef: *"eso que
     # queda registrado con tu nombre no se lo pongas: ellos van a creer que el
     # paquete va a pasar al nombre de [quien mide]"*.
-    if !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES) && !saltar_manifiesto?
+    # (La de la consolidando que se rehace está en `consolidando_honduras`:
+    # vuelve a aduana al guardar.)
+    if !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES) && !saltar_manifiesto? && !rehace
       return render json: { resultado: "no_esta_en_honduras", paquete: datos_de(paquete),
                             puede_saltar: true, estado: paquete.estado.humanize,
                             mensaje: "#{codigo_de(paquete)} está «#{paquete.estado.humanize}»: no pasó por Recibir Carga. " \
@@ -186,12 +191,15 @@ class MedicionController < ApplicationController
     end
 
     respuesta = respuesta_de(paquete, grupo, resultado_de(paquete))
-                  .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES))
+                  .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES) && !rehace)
     if remedir? && paquete.medicion_sesion.present?
-      cajas = Paquete.where(medicion_sesion: paquete.medicion_sesion).includes(:cliente, :tipo_envio).order(:id)
-      bultos = paquete.bultos.to_a
+      # C34-05 · Del consolidado vienen **todas** sus tandas: lo medido en
+      # partes se mide de nuevo en un solo volumen.
+      sesiones = sesiones_a_remedir(paquete, grupo)
+      cajas = Paquete.where(medicion_sesion: sesiones).includes(:cliente, :tipo_envio).order(:id)
+      bultos = Bulto.where(sesion: sesiones).order(:medido_at, :orden).to_a
       respuesta = respuesta.merge(
-        remedir_tanda: { sesion: paquete.medicion_sesion, volumenes: bultos.map { |b| bulto_json(b) } },
+        remedir_tanda: { sesion: paquete.medicion_sesion, sesiones: sesiones, volumenes: bultos.map { |b| bulto_json(b) } },
         hermanas: cajas.map { |h| datos_de(h) },
         mensaje: "Midiendo de nuevo: #{cajas.size} paquete#{"s" if cajas.size != 1} y " \
                  "#{volumenes_texto(bultos.size)} del #{paquete.medido_at&.strftime('%d/%m/%Y')} " \
@@ -377,15 +385,18 @@ class MedicionController < ApplicationController
   # **una** tanda y ninguna caja está ya en una pre-factura —ahí el peso se
   # congeló, y medir de nuevo no tiene adónde ir—. Nada va solo a la
   # pre-factura: Yusef, *"no lo hagamos todavía… no quiero sobresaturar eso"*.
+  #
+  # C34-05 · `RP-111` · Y también después de F8: la consolidando se anula al
+  # guardar y lo nuevo reemplaza a lo viejo —un peso, no tres—. Y con varias
+  # tandas: lo que «Medirlo solo» dejó en partes se junta.
   def consolidado_ya_medido(grupo)
     return nil unless grupo&.consolidada? && !grupo.cerrada?
 
     medidas = grupo.cajas.select(&:medida?).map(&:paquete)
     return nil if medidas.empty?
 
-    sesiones = medidas.filter_map(&:medicion_sesion).uniq
-    congeladas = medidas.select { |p| p.pre_factura_id.present? || p.venta_id.present? }
-    puede = sesiones.size == 1 && congeladas.empty? && medidas.all? { |p| p.medicion_sesion.present? }
+    congeladas = medidas.select { |p| (p.pre_factura_id.present? || p.venta_id.present?) && !se_rehace?(p) }
+    puede = congeladas.empty? && medidas.all? { |p| p.medicion_sesion.present? }
     primera = medidas.min_by(&:medido_at)
     { resultado: "consolidado_ya_medido", pre_alerta: grupo.pre_alerta.numero_documento,
       medidas: medidas.map { |p| { codigo: codigo_de(p), fecha: p.medido_at&.strftime("%d/%m/%Y"), por: p.medido_por } },
@@ -393,9 +404,27 @@ class MedicionController < ApplicationController
       mensaje: "El consolidado #{grupo.pre_alerta.numero_documento} ya tiene #{medidas.size} " \
                "paquete#{"s" if medidas.size != 1} medido#{"s" if medidas.size != 1}" \
                "#{" desde el #{primera.medido_at.strftime('%d/%m/%Y')}" if primera&.medido_at}. " +
-               (puede ? "Traelas del estante y medí todo junto: van en el mismo volumen." :
-                        "#{congeladas.any? ? 'Ya están en una pre-factura' : 'Se midieron en tandas distintas'}: " \
-                        "medí ésta sola, o dejala de lado.") }
+               (puede ? "Traelos del estante y medí todo junto: van en el mismo volumen." :
+                        "Ya están en una pre-factura que se avisó: medí éste solo, o dejalo de lado.") }
+  end
+
+  # C34-05 · La pre-factura de este paquete es una consolidando sin avisar,
+  # y todas sus tandas son del consolidado que se mide de nuevo.
+  def se_rehace?(paquete)
+    pf = paquete.pre_factura
+    return false if pf.nil? || paquete.venta_id.present?
+    return false unless pf.creado? && pf.consolidando_at.present? && pf.notificado_at.nil?
+
+    (GuardarPreFacturaAuditada.sesiones_de(pf) - sesiones_a_remedir(paquete, paquete.grupo_de_union)).empty?
+  end
+
+  # Las tandas que se miden de nuevo: las del consolidado entero, o la del
+  # paquete si va solo.
+  def sesiones_a_remedir(paquete, grupo)
+    return [ paquete.medicion_sesion ].compact unless grupo&.consolidada?
+
+    (grupo.cajas.select(&:medida?).filter_map { |c| c.paquete.medicion_sesion } + [ paquete.medicion_sesion ])
+      .compact.uniq
   end
 
   # Lista blanca, aunque `MedirBulto` ya lea campo por campo y nunca haga un
@@ -425,7 +454,8 @@ class MedicionController < ApplicationController
 
     { paquete_ids: Array(params[:paquete_ids]),
       volumenes: Array(params[:volumenes]).map { |v| v.permit(:peso, :alto, :largo, :ancho).to_h },
-      reemplaza_sesion: params[:reemplaza_sesion].presence }
+      reemplaza_sesion: params[:reemplaza_sesion].presence,
+      reemplaza_sesiones: Array(params[:reemplaza_sesiones]).map(&:to_s).compact_blank }
   end
 
   def ya_escaneadas

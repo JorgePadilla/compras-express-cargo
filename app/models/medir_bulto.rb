@@ -50,26 +50,25 @@ class MedirBulto
   # una lista de `{ peso:, alto:, largo:, ancho: }` en el orden en que se
   # agregaron. `reemplaza_sesion` es la tanda que se está midiendo de nuevo
   # (`C27-33`): sus bultos se van y sus cajas pueden volver a entrar.
+  # `reemplaza_sesiones`, varias (C34-05: un consolidado medido en partes se
+  # mide de nuevo todo junto, en un solo volumen).
   #
   # `autorizacion` es `{ supervisor_id:, pin:, motivo: }`, y solo hace falta
   # cuando a la tanda le faltan cajas que vinieron (`FaltantesDeLaTanda`).
-  def guardar!(paquete_ids:, volumenes:, reemplaza_sesion: nil, autorizacion: nil)
+  def guardar!(paquete_ids:, volumenes:, reemplaza_sesion: nil, reemplaza_sesiones: nil, autorizacion: nil)
     lista = Array(volumenes).map { |v| v.respond_to?(:to_unsafe_h) ? v.to_unsafe_h : v.to_h }
     raise NoSePuede, "No hay ningún volumen que guardar: poné al menos el peso." if lista.empty?
     raise NoSePuede, demasiadas_msg if lista.size > Bulto::MAXIMO_POR_SESION
 
-    reemplaza_sesion = reemplaza_sesion.presence
-    if reemplaza_sesion && !Bulto.exists?(sesion: reemplaza_sesion)
+    reemplaza = (Array(reemplaza_sesiones) + [ reemplaza_sesion ]).map(&:to_s).compact_blank.uniq
+    if reemplaza.any? { |s| !Bulto.exists?(sesion: s) }
       raise NoSePuede, "La tanda que se quería corregir ya no existe. Escaneá el paquete otra vez."
     end
-    if reemplaza_sesion && (pf = Bulto.pre_factura_que_cobra(reemplaza_sesion))
-      raise NoSePuede, "Esa tanda ya se cobra en la pre-factura #{pf.numero}: sus volúmenes no se pueden " \
-                       "medir de nuevo desde acá. Anulá la pre-factura primero."
-    end
+    a_soltar = consolidandos_que_se_rehacen(reemplaza)
 
     cajas = cajas_de(paquete_ids)
     numeros = lista.map { |v| numeros_de(v) }
-    validar!(cajas, reemplaza_sesion)
+    validar!(cajas, reemplaza, soltando: a_soltar.map(&:id))
     permiso = permiso_por_faltantes(cajas, autorizacion)
 
     sesion = SecureRandom.uuid
@@ -77,7 +76,11 @@ class MedirBulto
 
     Bulto.transaction do
       permiso&.save!
-      reemplazar!(reemplaza_sesion, cajas) if reemplaza_sesion
+      if a_soltar.any?
+        a_soltar.each { |pf| soltar_consolidando!(pf) }
+        cajas.each(&:reload)
+      end
+      reemplaza.each { |vieja| reemplazar!(vieja, cajas) }
       # Primero las cajas y después los bultos: el `peso_cobrar` del bulto lee
       # el trato de cobro de las cajas, y tienen que estar ya en la tanda.
       cajas.each do |caja|
@@ -155,6 +158,38 @@ class MedirBulto
          .find_each(&:destroy!)
   end
 
+  # C34-05 · `RP-111` · La pre-factura que F8 dejó **consolidando** no frena
+  # medir de nuevo: se anula, y la tanda nueva se audita en una pre-factura
+  # nueva con **un** peso. Yusef: *"si el cliente está consolidando, es
+  # actualización de pesos… en medición es donde me hace falta que agregue el
+  # nuevo peso, no que le agregue un peso más"*. Jorge, el 2026-10-31: medir de
+  # nuevo todo junto, y lo nuevo reemplaza a lo viejo.
+  #
+  # Solo si la medición se lleva **todas** las tandas de esa pre-factura: si
+  # quedara alguna, la anulada se la llevaría puesta. Y solo consolidando, sin
+  # avisar: lo avisado ya lo vio el cliente, y eso sigue frenando como siempre.
+  def consolidandos_que_se_rehacen(sesiones)
+    sesiones.filter_map { |s| Bulto.pre_factura_que_cobra(s) }.uniq.each do |pf|
+      unless pf.creado? && pf.consolidando_at.present? && pf.notificado_at.nil?
+        raise NoSePuede, "Esa tanda ya se cobra en la pre-factura #{pf.numero}: sus volúmenes no se pueden " \
+                         "medir de nuevo desde acá. Anulá la pre-factura primero."
+      end
+      next if (GuardarPreFacturaAuditada.sesiones_de(pf) - sesiones).empty?
+
+      raise NoSePuede, "La pre-factura #{pf.numero} tiene más tandas que las que se están midiendo de nuevo: " \
+                       "traé todo lo del consolidado a la mesa, o medí este paquete solo."
+    end
+  end
+
+  # Se anula —sus cajas vuelven a aduana, libres (`PreFactura#anular!`)— y
+  # queda dicho por qué. Nadie la vio: F8 no avisa.
+  def soltar_consolidando!(pre_factura)
+    pre_factura.anular!
+    nota = "#{Time.current.strftime('%d/%m/%Y %H:%M')} · Anulada al medir de nuevo todo junto el consolidado " \
+           "(#{@user&.iniciales_display}): la tanda nueva va en otra pre-factura."
+    pre_factura.update_columns(notas: [ pre_factura.notas.presence, nota ].compact.join("\n"))
+  end
+
   # PR-P.1 · Medir de nuevo no sigue si una pre-factura **viva** cobra algún
   # volumen de la tanda: el volumen es la línea que le cobra al cliente
   # (`Bulto has_many :pre_factura_items, restrict`), y borrarlo dejaría la
@@ -207,8 +242,8 @@ class MedirBulto
   # la misma tarifa y el mismo trato de cobro — lo que el volumen necesita para
   # cobrarse con una sola línea. La pantalla ya lo frena al escanear; esto es
   # la red para la pestaña vieja o el pedido armado a mano.
-  def validar!(cajas, reemplaza_sesion)
-    cajas.each { |caja| validar_caja!(caja, reemplaza: reemplaza_sesion) }
+  def validar!(cajas, reemplaza, soltando: [])
+    cajas.each { |caja| validar_caja!(caja, reemplaza: reemplaza, soltando: soltando) }
 
     cajas.each_with_index do |caja, i|
       next if i.zero?
@@ -218,14 +253,18 @@ class MedirBulto
     end
   end
 
-  def validar_caja!(caja, reemplaza: nil)
+  def validar_caja!(caja, reemplaza: [], soltando: [])
+    # C34-05 · La de la consolidando que se anula al guardar: se suelta ahí, y
+    # vuelve a aduana (`soltar_consolidando!`).
+    return if caja.pre_factura_id.present? && soltando.include?(caja.pre_factura_id) && caja.venta_id.nil?
+
     if caja.pre_factura_id.present? || caja.venta_id.present?
       raise NoSePuede, "#{codigo(caja)} ya está en una pre-factura: el peso se congeló ahí."
     end
     # Una caja que ya está en una tanda solo entra si esta medición viene a
     # reemplazar **esa** tanda: si no, es un pip sobre una caja ya medida y la
     # pantalla tiene que haber preguntado antes.
-    if caja.medicion_sesion.present? && caja.medicion_sesion != reemplaza
+    if caja.medicion_sesion.present? && !Array(reemplaza).include?(caja.medicion_sesion)
       raise NoSePuede, "#{codigo(caja)} ya está medida. Para corregirla, escaneala y elegí «Medir de nuevo»."
     end
     return if caja.estado.in?(Paquete::ESTADOS_FACTURABLES)

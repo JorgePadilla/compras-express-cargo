@@ -13768,6 +13768,21 @@ nuevo todo junto» es lo que Yusef llama *actualización de pesos*, o si quiere
 sumarle el peso nuevo al volumen que ya está, sin volver a medir lo del
 estante. ❓ `RP-111`.
 
+▶ **2026-10-31 (`PR-C34.4`).** Jorge contestó `RP-111`: **medir de nuevo todo
+junto, y lo nuevo reemplaza a lo viejo**. Lo que cambió:
+- «Medir de nuevo todo junto» se ofrece también **después de F8**. Antes
+  desaparecía apenas había pre-factura, y quedaba solo «medirla sola», que es
+  lo que dejaba tres volúmenes.
+- Trae **todas** las tandas del consolidado, no solo una: lo que se midió en
+  partes vuelve junto a la mesa.
+- Al guardar, la pre-factura consolidando se **anula** (con la nota de por qué)
+  y sus paquetes vuelven a aduana, libres. La tanda nueva se audita en una
+  pre-factura nueva con **un** peso, y las líneas automáticas (recolecta,
+  cambio de servicio) salen una sola vez.
+- Solo si nadie vio esa pre-factura: una ya avisada sigue frenando, como
+  antes. Y si la consolidando tiene otra tanda que no se trajo a la mesa, no
+  se anula: dice que se traiga todo, o que se mida el paquete solo.
+
 Lo que pidieron, en la misma pantalla:
 - **Decir «consolidado» desde el primer escaneo**: *"como es el primero, le
   tiene que decir: este paquete es de un consolidado… ahí no lo vi"*. Y al
@@ -14061,7 +14076,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-02` | Manifiesto de Miami: «empacar sin escanear» abajo, «finalizar e imprimir» arriba, Enter en el confirm, pallets de Tegucigalpa, metas | ❌ Botones y confirm. ❓ `RP-110` pallets. Sacar/meter después de finalizado ya está (`C30-06`), falta probarlo |
 | `C34-03` | «Empacar sin escanear» deja afuera la segunda caja de un split | ❓ A reproducir |
 | `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
-| `C34-05` | El consolidado que se mide en partes: sumar al anterior | ❌ Falta; la forma espera `RP-111` |
+| `C34-05` | El consolidado que se mide en partes: sumar al anterior | ✅ ▶ **2026-10-31** (`PR-C34.4`): medir de nuevo todo junto también después de F8; la consolidando se anula y queda un solo peso |
 | `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ✅ ▶ **2026-10-31** (`PR-C34.3`): contaba dos veces el medido que volvía a la mesa; ahora es el total menos lo que falta, y lo medido antes se ve |
 | `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
@@ -14077,7 +14092,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | Id | Qué |
 |---|---|
 | `RP-110` | **Los pallets de Tegucigalpa** (`C34-02`): ¿una etiqueta por pallet que diga qué sucursales lleva adentro? ¿O alcanza con que el manifiesto diga en qué caja va lo de cada sucursal? El sistema no tiene pallets |
-| `RP-111` | **El consolidado que llega en partes** (`C34-05`): cuando llegan los que faltaban, ¿se vuelve a medir todo junto (lo que ofrece hoy medición, y borra lo anterior), o se le **suma** el peso y el volumen nuevo a lo que ya estaba, sin volver a medir lo del estante? |
+| `RP-111` | **El consolidado que llega en partes** (`C34-05`): cuando llegan los que faltaban, ¿se vuelve a medir todo junto (lo que ofrece hoy medición, y borra lo anterior), o se le **suma** el peso y el volumen nuevo a lo que ya estaba, sin volver a medir lo del estante? ▶ **2026-10-31**, Jorge: se mide de nuevo todo junto y lo nuevo reemplaza. Construido en `PR-C34.4` |
 | `RP-112` | **El arranque del consolidado en pre-factura** (`C34-07`): ¿F8 deja pasar el grupo incompleto con la nota «el cliente inicia el consolidado»? ¿Y el PIN de medición con faltantes cuenta como «facturar lo que hay»? ▶ **2026-10-31**, Jorge: sí a las dos, y F9 pregunta en vez de trabar. Construido en `PR-C34.1` |
 | `RP-113` | **Las notas de un toque de la pre-factura** (`C34-10`): ¿qué frases van? Las dichas fueron «se le metió un paquete adentro de la caja» y «se consideró peso o volumen fuera de la caja» |
 | `RP-114` | **La fecha de trabajo** (lista 2): ¿qué es lo que tiene que actualizarse solo? ¿Que la hoja pase a hoy cada día, o que la pre-factura tome la fecha al dar F8/F9 aunque la hoja diga otra? |
