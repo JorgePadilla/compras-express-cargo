@@ -57,6 +57,29 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
                     "con el renglón del pago se recortan #{contenido - etiqueta}px por abajo."
   end
 
+  # C34 · Lista 11 · La pre-alerta consolidada, en el renglón del registro:
+  # la más llena (entrega personal sin pagar, driver, tercero) con PA tiene
+  # que caber de alto, y el PA y la fecha no se cortan. Si alguien se corta,
+  # es el driver.
+  test "con la pre-alerta consolidada en el renglón del registro, la más llena cabe y el PA se lee entero" do
+    pa = PreAlerta.create!(numero_documento: "PA-000123", cliente: @paquete.cliente, tipo_envio: @paquete.tipo_envio,
+                           consolidado: true, estado: "pre_alerta", titulo: "Consolidado",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: @paquete.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @paquete)
+    @paquete.update!(proveedor: Proveedor.where(tipo: "entrega_personal").activos.first, prepagado_miami: false)
+
+    visit etiqueta_paquete_path(@paquete)
+
+    assert_selector "[data-campo=pre_alerta]", text: "PA-000123"
+    assert_operator medir("scrollHeight"), :<=, medir("clientHeight")
+    %w[pre_alerta fecha].each do |campo|
+      caja = page.evaluate_script("(function(){var e=document.querySelector('[data-campo=#{campo}]'), r=e.getBoundingClientRect(), " \
+                                  "p=e.closest('.etq').getBoundingClientRect(); return [r.right, p.right, e.scrollWidth, e.clientWidth];})()")
+      assert_operator caja[0], :<=, caja[1] + 0.5, "«#{campo}» se sale de la etiqueta"
+      assert_operator caja[2], :<=, caja[3] + 1, "«#{campo}» se corta"
+    end
+  end
+
   test "la etiqueta sin tercero ni driver tampoco se desborda" do
     @paquete.update!(tercero: nil, driver: nil, tracking_secundario: nil)
 

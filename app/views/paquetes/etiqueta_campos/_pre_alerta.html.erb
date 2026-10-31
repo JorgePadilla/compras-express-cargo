@@ -1,0 +1,13 @@
+<%# ── La pre-alerta consolidada ──
+    C34 · Lista 11. El personal pidió que la etiqueta de recepción diga el
+    número de la pre-alerta, y no «agrupado» (lo que decía la del sistema
+    viejo). Yusef: *"ayudaría para control visual, no tiene que ser tan
+    grande"*. Jorge: *"no tengo espacio ahí… te lo voy a intentar"*.
+
+    Solo la **consolidada**: es la que agrupa, y la que pre-factura y medición
+    llaman por su número (`GrupoDeUnion`). Va en el renglón del registro, como
+    el pago: la Dymo no tiene una fila más, y acá cuesta ancho. Si no entra, el
+    que se recorta es el driver. %>
+<% if etiqueta_plantilla.visible?("pre_alerta") && (pa = paquete.pre_alerta_en_etiqueta) %>
+  <span style="font-size:var(--fs-pre-alerta); font-weight:800; white-space:nowrap; flex:0 0 auto;" data-campo="pre_alerta"><%= pa %></span>
+<% end %>
