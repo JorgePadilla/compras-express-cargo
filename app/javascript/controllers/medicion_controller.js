@@ -581,19 +581,28 @@ export default class extends conEnterAvanza(Controller) {
       : ""
 
     const g = this._grupo
-    const hay = !!(g && g.total > 1)
+    // C34-05 · Un consolidado se dice **desde el primer paquete**, aunque la
+    // pre-alerta tenga uno solo: *"como es el primero, le tiene que decir:
+    // este paquete es de un consolidado… ahí no lo vi"*.
+    const hay = !!(g && (g.total > 1 || g.consolidada))
     this.tandaGrupoTarget.hidden = !hay
     if (!hay) { this._yaCompleto = false; return }
 
-    const { enMesa, cajasEnMesa, faltan } = this._cuentaDelGrupo(g)
-    const medidas = g.cajas.filter((c) => c.estado === "medida").length
+    const { enMesa, cajasEnMesa, medidasAntes, faltan } = this._cuentaDelGrupo(g)
 
     // C28-11 · El número, **grande**. Yusef, mirando la línea con el conteo:
     // *"eso sí se necesita hacer más grande. Así como está, pero más grande.
     // El número, a cuánto falta"*. Cuenta lo que ya está resuelto —escaneado
     // en esta tanda o medido antes— contra el total del envío.
-    this.tandaContadorTarget.textContent = `${cajasEnMesa + medidas} de ${g.total}`
-    this.tandaFaltanTarget.textContent = faltan.length > 0 ? `faltan ${faltan.length}` : ""
+    //
+    // C34-06 · **Contra lo que falta**, no sumando por dos lados. Se sumaba
+    // «en la mesa» más «medidas», y el paquete medido que volvía a la mesa con
+    // «medir de nuevo todo junto» contaba dos veces: «3 de 2», o el «5 de 6
+    // · faltan 1» de la pasada.
+    this.tandaContadorTarget.textContent = `${g.total - faltan.length} de ${g.total}`
+    // C34-05 · Lo que falta, **escrito**: *"6 de 6, falta uno, pero debería
+    // decir falta uno que no ha llegado a Miami… es más explícito"*.
+    this.tandaFaltanTarget.textContent = this._loQueFalta(faltan)
     // Y cuando no falta nada, que lo diga y que suene: *"Completado.
     // Completado. Pero literalmente quiero que salga al lado… sí, el
     // audio"*. Suena **una vez**, al pasar de faltar a completo, y no con
@@ -608,11 +617,11 @@ export default class extends conEnterAvanza(Controller) {
     // C29-16 · Lo suelto se cuenta por cliente y por manifiesto, y la línea lo
     // dice con las palabras de Yusef: *"Diego tiene cinco paquetes en el vuelo
     // y solo estás escaneando tres, y faltan dos en el mismo manifiesto"*.
-    const encabezado = g.consolidada ? `Consolidando ${g.numero} · ${g.total} paquetes`
+    const encabezado = g.consolidada ? `Consolidado ${g.numero} · ${g.total} ${g.total === 1 ? "paquete" : "paquetes"}`
       : g.del_manifiesto ? `${g.cliente} tiene ${g.total} en el manifiesto ${g.del_manifiesto}`
       : `Envío de ${g.total} paquetes`
-    const partes = [encabezado, g.del_manifiesto ? `llevás ${cajasEnMesa}` : `escaneadas ${cajasEnMesa}`,
-                    `medidas ${medidas}`, `faltan ${faltan.length}`]
+    const partes = [encabezado, g.del_manifiesto ? `llevás ${cajasEnMesa}` : `escaneados ${cajasEnMesa}`,
+                    `medidos antes ${medidasAntes}`, `faltan ${faltan.length}`]
     if (g.parcial_autorizado) {
       partes.push(`se facturó incompleto el ${g.parcial_autorizado.fecha} por ${g.parcial_autorizado.por}`)
     }
@@ -642,11 +651,36 @@ export default class extends conEnterAvanza(Controller) {
   // Lo que está en la mesa y lo que falta del grupo a la vista. Lo usan la
   // línea de la tanda y el aviso de F9 (C32-03): si los dos contaran por su
   // lado, el modal podría decir «faltan 2» con la línea diciendo «faltan 1».
+  //
+  // C34-06 · Lo medido **en la tanda que se está midiendo de nuevo** no está
+  // resuelto si se sacó de la mesa: al guardar vuelve a quedar sin medir
+  // (`MedirBulto#reemplazar!`). Y lo que está en la mesa cuenta una vez, esté
+  // medido de antes o no.
   _cuentaDelGrupo(g) {
     const enTanda = new Set(this._idsDeLaTanda())
     const enMesa = (c) => !!(c.id && enTanda.has(c.id))
+    const seRemide = (c) => !!(this._reemplazaSesion && c.sesion === this._reemplazaSesion)
+    const medidaAntes = (c) => c.estado === "medida" && !enMesa(c) && !seRemide(c)
     return { enMesa, cajasEnMesa: g.cajas.filter(enMesa).length,
-             faltan: g.cajas.filter((c) => c.estado !== "medida" && !enMesa(c)) }
+             medidasAntes: g.cajas.filter(medidaAntes).length,
+             faltan: g.cajas.filter((c) => !enMesa(c) && !medidaAntes(c)) }
+  }
+
+  // C34-05 · «Falta 1 que no ha llegado a Miami»: lo que falta por dónde
+  // está, con las mismas palabras que la pre-factura (`GrupoDeUnion#lo_que_falta`).
+  _loQueFalta(faltan) {
+    if (faltan.length === 0) return ""
+    const orden = [ "aqui", "en_camino", "esperada", "medida" ]
+    const porEstado = {}
+    faltan.forEach((c) => { (porEstado[c.estado] ||= []).push(c) })
+    return orden.filter((e) => porEstado[e]).map((e) => {
+      const n = porEstado[e].length
+      const verbo = n === 1 ? "Falta 1" : `Faltan ${n}`
+      if (e === "esperada") return `${verbo} que no ${n === 1 ? "ha" : "han"} llegado a Miami`
+      if (e === "en_camino") return `${verbo} en Miami, que todavía no ${n === 1 ? "llega" : "llegan"} acá`
+      if (e === "medida") return `${verbo} de la medición anterior, que no está en la tanda`
+      return `${verbo} acá, sin medir`
+    }).join(" · ")
   }
 
   // Un dibujito por caja. Solo el sufijo: el número madre ya está en la mesa y
@@ -716,8 +750,16 @@ export default class extends conEnterAvanza(Controller) {
     nodo.querySelector("[data-campo=wr]").textContent = p.codigo || p.tracking
     nodo.querySelector("[data-campo=detalle]").textContent =
       [p.tipo_envio, p.caja && `paquete ${p.caja}`,
-       p.salto_manifiesto && "SIN MANIFIESTO", p.descripcion].filter(Boolean).join(" · ")
+       p.salto_manifiesto && "SIN MANIFIESTO", this._medidoAntes(p) && "MEDIDO ANTES",
+       p.descripcion].filter(Boolean).join(" · ")
     return nodo
+  }
+
+  // C34-06 · *"No está jalando la que ya medimos, la primera… tiene que
+  // jalarlo para que concuerde cuáles son"*: el que volvió a la mesa medido de
+  // antes lo dice en su renglón.
+  _medidoAntes(p) {
+    return !!this._grupo?.cajas?.some((c) => c.id === p.id && c.estado === "medida")
   }
 
   _pintarVolumenes() {

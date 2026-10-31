@@ -165,7 +165,8 @@
                 </div>
                 <p hidden class="mt-2 rounded-xl bg-cec-teal px-6 py-3 text-center text-4xl font-bold tracking-wide text-cec-navy-dark"
                    data-medicion-target="tandaCompleto">COMPLETADO</p>
-                <p class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
+                <%# C34-05 · El consolidado se lee desde el primer paquete, en grande. %>
+                <p class="mt-1 text-lg font-bold text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
                 <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Los paquetes del envío" data-medicion-target="tandaCajas"></ul>
                 <%# Solo las que no están acá: ésas hay que ir a buscar o
                     reclamar. Las «acá, sin medir» ya se ven en el dibujo. %>

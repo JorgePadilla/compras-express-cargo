@@ -702,7 +702,7 @@ class MedicionController < ApplicationController
       envio: p&.numero_recepcion, tracking: caja.tracking,
       descripcion: caja.descripcion, caja: (caja_de(p) if p), estado: caja.estado, donde: caja.donde,
       peso: (numeros&.peso&.to_f if caja.medida?), medidas: (medidas_de(numeros) if caja.medida? && numeros),
-      por: p&.medido_por, seleccionada: p.present? && p.id == seleccionada_id,
+      por: p&.medido_por, sesion: p&.medicion_sesion, seleccionada: p.present? && p.id == seleccionada_id,
       medible: caja.aqui? || caja.medida? }
   end
 
