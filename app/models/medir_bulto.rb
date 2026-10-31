@@ -84,11 +84,13 @@ class MedirBulto
         caja.update!(medicion_sesion: sesion, medido_at: ahora, medido_por: @user&.iniciales_display,
                      **sello_de_salto(caja, ahora))
       end
-      numeros.each_with_index.map do |n, i|
+      bultos = numeros.each_with_index.map do |n, i|
         Bulto.create!(cliente: cajas.first.cliente, user: @user, sesion: sesion,
                       orden: i + 1, de_cuantos: numeros.size, medido_at: ahora,
                       medido_por: @user&.iniciales_display, **n)
       end
+      sellar_lo_que_hay!(cajas, permiso.autorizado_por) if permiso
+      bultos
     end
   end
 
@@ -116,6 +118,18 @@ class MedirBulto
     raise NecesitaAutorizacion.new(permiso.errors.full_messages.to_sentence, lista) unless permiso.valid?
 
     permiso
+  end
+
+  # C34-07 · Lista 23 · El código del supervisor en medición **es** el «facturar
+  # lo que hay» del consolidado. Antes no pasaba a pre-factura: *"va a omitir y
+  # solo medir, pasa, pero inmediatamente nos da error en prefactura; tuvimos
+  # que regresar a agregar los otros ocho"*. El split sin pre-alerta no tiene
+  # dónde sellarse: su F9 pregunta, que es lo mismo que dejar pasar con aviso.
+  def sellar_lo_que_hay!(cajas, supervisor)
+    cajas.filter_map(&:grupo_pendiente).filter_map(&:pre_alerta).uniq.each do |pa|
+      PasarGrupoIncompleto.new(pre_alerta: pa, user: supervisor || @user)
+                          .call(por: "con el código de supervisor en medición")
+    end
   end
 
   def concepto_de(caja)

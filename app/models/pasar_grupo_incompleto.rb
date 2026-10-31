@@ -16,14 +16,16 @@ class PasarGrupoIncompleto
     @user = user
   end
 
-  def call
+  # `por`: cómo se pasó, para el historial (C34-07: el PIN de medición).
+  def call(por: nil)
     grupo = GrupoDeUnion.new(pre_alerta: @pre_alerta)
     raise YaCompleto, "El grupo está completo: no hay nada que forzar." if grupo.completo?
 
     iniciales = @user&.iniciales_display
     @pre_alerta.update!(union_parcial_at: Time.current, union_parcial_por: iniciales)
     @pre_alerta.append_historial!(
-      "#{Time.current.strftime('%d/%m/%Y %H:%M')} · Se factura sin el grupo completo (#{iniciales}): " \
+      "#{Time.current.strftime('%d/%m/%Y %H:%M')} · Se factura sin el grupo completo (#{iniciales}" \
+      "#{", #{por}" if por}): " \
       "#{grupo.medidas} de #{grupo.total} medidas. Faltaba #{detalle(grupo)}."
     )
     grupo

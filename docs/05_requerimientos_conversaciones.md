@@ -13850,6 +13850,29 @@ Lo que se desprende, *a confirmar* (`RP-112`):
   punto 14 de la lista, que Yusef aprobó.
 - El PIN de medición con faltantes **cuenta** como «facturar lo que hay».
 
+▶ **2026-10-31 (`PR-C34.1`).** Jorge contestó `RP-112` con las cuatro, y así
+quedó construido:
+- **El grupo incompleto ya no traba al auditar.** El volumen entra con una
+  franja dorada que dice qué falta y dónde: *«El consolidado PA-120 no está
+  completo: falta 1 que no ha llegado a Miami y 1 medido en otra tanda: traelo
+  del estante. F8 lo guarda consolidando; F9 pregunta antes de avisar.»* Lo que
+  traba es una caja **sin medir** (`AuditoriaDeTanda`, tipo `:sin_medir`).
+- **F8** crea la pre-factura del consolidado con lo que hay. Es el arranque que
+  faltaba: antes el bloqueo iba antes de F8, y F8 solo podía reabrir.
+- **F9** con un grupo al que le falta carga abre *«¿Está seguro que desea
+  notificarlo?»* con lo que falta, y guarda con «Sí, notificar» (o F9 otra vez).
+  Mira **todas** las tandas de la pre-factura, también las de un F8 anterior
+  (`GuardarPreFacturaAuditada::NecesitaConfirmacion`).
+- **El código de supervisor en medición** (`medicion_con_faltantes`) sella
+  «facturar lo que hay» en la pre-alerta, con el historial que lo dice. Con eso,
+  el F9 de ese consolidado ya no pregunta (lista 23). El split sin pre-alerta no
+  tiene dónde sellarse: su F9 pregunta.
+
+**Cambia `C26-03`.** Allá el grupo completo, cerrado o con «facturar lo que hay»
+era condición para pre-facturar (`Paquete#listo_para_prefactura?`). Ahora es la
+condición para que F9 **no pregunte**: la excepción pasó a ser el camino normal
+del arranque, que es lo que Yusef pidió en la pasada.
+
 #### C34-08 · La sucursal que no es San Pedro: siempre F9, y avisa quien recibe allá (min 72–84) — responde parte de `RP-108`
 
 > "Si es de Tegus, ustedes ya no tienen que guardar F8… cuando el manifiesto
@@ -13978,7 +14001,7 @@ personal se va a hacer.
 | 11 | Que las etiquetas de recepción lleven el número de pre-alerta, no «agrupado» | Yusef: *"es hasta bueno, mejor, por favor… ayudaría para control visual, no tiene que ser tan grande"*. Jorge: *"no tengo espacio ahí… te lo voy a intentar"* | La etiqueta de volumen de medición ya lleva «PA-…». La de recepción de Miami no tiene ese campo | ❌ Falta, si cabe. En la Dymo hay que medir, no adivinar |
 | 12 | La guía de trabajo de «Preparar pre-factura» la crea el supervisor y les asigna a los demás, para que todos tengan la misma fecha | *"Estoy a punto de decirte que no, pero dame una buena razón."* — *"Porque copian lo que quieren y ponen lo que quieren."* No se cierra | La hoja es por usuario, en la sesión | ❓ `RP-116` |
 | 13 | Una sección aparte para auditar la carga una vez finalizada, y que la pre-factura auditada lo diga | *"No sé qué es, ni yo."* Yusef cree que es lo que hace Vanessa al revisar pesos y medidas después de medición: *"eso ya está"* | Se guarda `auditado_por_id`, pero no se muestra | ❓ Sin pedido claro. Mostrar quién auditó es barato |
-| 14 | Al dar F9, alerta si la pre-factura todavía tiene paquetes en tránsito de la misma pre-alerta (consolidando) | *"Tiene sentido… está muy bueno"*. F8 guarda consolidando; F9 es que ya terminó, y si queda uno en tránsito: *"¿está seguro que desea notificarlo?"* | Hoy es un **bloqueo duro** (`grupo_incompleto`), no una pregunta (`C34-07`) | ❌ Falta. Aprobado: pasa a confirmación |
+| 14 | Al dar F9, alerta si la pre-factura todavía tiene paquetes en tránsito de la misma pre-alerta (consolidando) | *"Tiene sentido… está muy bueno"*. F8 guarda consolidando; F9 es que ya terminó, y si queda uno en tránsito: *"¿está seguro que desea notificarlo?"* | Hoy es un **bloqueo duro** (`grupo_incompleto`), no una pregunta (`C34-07`) | ✅ ▶ **2026-10-31** (`PR-C34.1`): «¿Está seguro que desea notificarlo?» |
 | 15 | Un botón para sumar más de dos volúmenes o pesos | *"Eso ya está en el sistema. Está más que hecho."* | «Agregar volumen» (F5), hasta 10 por tanda | ✅ |
 | 16 | Al poner el código del cliente en cualquier envío, alerta si tiene un agrupado existente | *"Eso ya no es pre-factura, ya es medición… ya vamos a ver esa parte"* | Medición lo dice al **escanear** («UNIR con PA-…»), no al poner el código | 📄 Va con `C34-07` («traer del estante») |
 | 17 | Pre-alertas en colores distintos para ver cuáles van juntas | Lo hacían a mano en pre-factura; ahora es medición: *"hay que adaptarle un poquito a que se entienda"* | Una etiqueta de texto uniforme «UNIR · PA-…» | 📄 Va con la claridad de `C34-05` |
@@ -13987,7 +14010,7 @@ personal se va a hacer.
 | 20 | Que las notas internas del paquete se vean al escanear, debajo de la descripción, en letra chica y cursiva | Sin respuesta clara | Las «Notas internas» salen en el modal de notas de medición, no debajo de la descripción. Auditar no muestra notas | ❓ Revisar con `C34-09` |
 | 21 | Los **desconocidos**: corregir la pre-factura cuando aparece el dueño, sin borrarla y crear otra | Yusef: entran como desconocidos, se pre-facturan al final del día (*"a la una y media empiezan a hacer todos los desconocidos"*) para darle tiempo al cliente, y cuando reclama *"tienen que venir y borrarlo y crear una prefactura nueva y cambiarle nombre"*. Quiere que sea **corrección, no reprocesamiento**. Lo dejó para otra reunión: *"me tengo que ir a las 7:15"* | No hay concepto de desconocido. El cliente de la pre-factura no se edita. El del paquete sí, pero deja la pre-factura con el cliente viejo. Lo limpio hoy es anular → cambiar el cliente → re-auditar | ❓ `RP-117`, a tratar aparte |
 | 22 | *«La tarifa Shein consolidado en dos manifiestos sin consolidar independiente»* | ❓ No se entiende en el audio | — | ❓ Pedir el papel |
-| 23 | Poder pre-facturar aunque haya pendientes en medición, si ya pasó con PIN de autorización | *"Me faltó esa parte en medición, lo que hicimos hoy"* | El PIN de medición no pasa a pre-factura (`C34-07`) | ❌ Falta. Aprobado |
+| 23 | Poder pre-facturar aunque haya pendientes en medición, si ya pasó con PIN de autorización | *"Me faltó esa parte en medición, lo que hicimos hoy"* | El PIN de medición no pasa a pre-factura (`C34-07`) | ✅ ▶ **2026-10-31** (`PR-C34.1`): el PIN sella «facturar lo que hay» |
 
 Los puntos 14 y 23 son el mismo arreglo que `C34-07`, y el 9 es el modal de
 `C34-08`. En la reunión de 18:48 Yusef también mostró la pre-alerta de la
@@ -14019,7 +14042,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-04` | Fecha probable al poner la guía, sin correo | ✅ Ya está. El iPad con cámara, para después |
 | `C34-05` | El consolidado que se mide en partes: sumar al anterior | ❌ Falta; la forma espera `RP-111` |
 | `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ❌ Falta |
-| `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ❌ Falta. Lo primero (`RP-112`) |
+| `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
 | `C34-09` | Instrucciones del cliente solo para Miami | ❌ Falta. Decidido |
 | `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ❌ Falta. Las frases esperan `RP-113` |
@@ -14034,7 +14057,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 |---|---|
 | `RP-110` | **Los pallets de Tegucigalpa** (`C34-02`): ¿una etiqueta por pallet que diga qué sucursales lleva adentro? ¿O alcanza con que el manifiesto diga en qué caja va lo de cada sucursal? El sistema no tiene pallets |
 | `RP-111` | **El consolidado que llega en partes** (`C34-05`): cuando llegan los que faltaban, ¿se vuelve a medir todo junto (lo que ofrece hoy medición, y borra lo anterior), o se le **suma** el peso y el volumen nuevo a lo que ya estaba, sin volver a medir lo del estante? |
-| `RP-112` | **El arranque del consolidado en pre-factura** (`C34-07`): ¿F8 deja pasar el grupo incompleto con la nota «el cliente inicia el consolidado»? ¿Y el PIN de medición con faltantes cuenta como «facturar lo que hay»? |
+| `RP-112` | **El arranque del consolidado en pre-factura** (`C34-07`): ¿F8 deja pasar el grupo incompleto con la nota «el cliente inicia el consolidado»? ¿Y el PIN de medición con faltantes cuenta como «facturar lo que hay»? ▶ **2026-10-31**, Jorge: sí a las dos, y F9 pregunta en vez de trabar. Construido en `PR-C34.1` |
 | `RP-113` | **Las notas de un toque de la pre-factura** (`C34-10`): ¿qué frases van? Las dichas fueron «se le metió un paquete adentro de la caja» y «se consideró peso o volumen fuera de la caja» |
 | `RP-114` | **La fecha de trabajo** (lista 2): ¿qué es lo que tiene que actualizarse solo? ¿Que la hoja pase a hoy cada día, o que la pre-factura tome la fecha al dar F8/F9 aunque la hoja diga otra? |
 | `RP-115` | **Cobrar como sin reempaque** (lista 7): ¿la línea reemplaza al flete del paquete, o se agrega como descuento? ¿Quién pone el PIN? |

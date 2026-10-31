@@ -32,6 +32,9 @@ class GrupoDeUnion
   # Estados con los que una caja ya no se espera en la mesa de medición.
   FUERA_DE_JUEGO = %w[facturado en_reparto entregado anulado retornado desechado].freeze
 
+  # C34-07 · En qué orden se dice lo que falta: primero lo que está acá.
+  ORDEN_DE_LO_QUE_FALTA = %w[aqui en_camino esperada].freeze
+
   # Una caja del grupo — un cuadrito de la pantalla.
   Caja = Struct.new(:paquete, :tracking, :descripcion, keyword_init: true) do
     def estado
@@ -177,7 +180,50 @@ class GrupoDeUnion
   # Las que tienen algo que rotular. Una caja sin medir no lleva sticker.
   def paquetes_medidos = cajas.select(&:medida?).map(&:paquete)
 
+  # C34-07 · Cómo se llama el grupo en un aviso: el consolidado por su
+  # pre-alerta, el split por su warehouse receipt.
+  def nombre
+    return "El consolidado #{pre_alerta.numero_documento}" if pre_alerta
+
+    wr = cajas.filter_map { |c| c.paquete&.numero_recepcion }.first
+    wr ? "El envío #{wr}, que viene partido," : "El envío partido"
+  end
+
+  # Para que nadie lo forme a mano.
+  def clave = pre_alerta ? "pa-#{pre_alerta.id}" : "wr-#{cajas.filter_map { |c| c.paquete&.id }.min}"
+
+  # C34-07 · Lo que le falta al grupo, **escrito**: Yusef, en la pasada, *"6 de
+  # 6, falta uno, pero debería decir falta uno que no ha llegado a Miami… es más
+  # explícito"*.
+  #
+  # `en_pantalla`: las sesiones que la pantalla ya tiene cargadas. Lo medido en
+  # **otra** tanda que nadie pre-facturó está en un estante: *"si ya tiene
+  # agrupado, el sistema le dice que tiene que ir a traer los estantes"*.
+  def lo_que_falta(en_pantalla: [])
+    partes = faltantes.group_by(&:estado).sort_by { |estado, _| ORDEN_DE_LO_QUE_FALTA.index(estado) || 9 }
+                      .map { |estado, lista| falta_texto(estado, lista.size) }
+    en_estante = cajas.count do |c|
+      c.medida? && c.paquete.pre_factura_id.nil? && c.paquete.venta_id.nil? &&
+        !Array(en_pantalla).map(&:to_s).include?(c.paquete.medicion_sesion.to_s)
+    end
+    if en_estante.positive?
+      partes << "#{en_estante} #{en_estante == 1 ? 'medido' : 'medidos'} en otra tanda: " \
+                "#{en_estante == 1 ? 'traelo' : 'traelos'} del estante"
+    end
+    partes.to_sentence(two_words_connector: " y ", last_word_connector: " y ")
+  end
+
+
   private
+
+  def falta_texto(estado, n)
+    verbo = n == 1 ? "falta 1" : "faltan #{n}"
+    case estado
+    when "esperada"  then "#{verbo} que no #{n == 1 ? 'ha' : 'han'} llegado a Miami"
+    when "en_camino" then "#{verbo} en Miami, que todavía no #{n == 1 ? 'llega' : 'llegan'} acá"
+    else                  "#{verbo} acá, sin medir"
+    end
+  end
 
   def cajas_de(pre_alerta)
     pre_alerta.pre_alerta_paquetes.includes(:paquete).order(:id).flat_map do |renglon|
