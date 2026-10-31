@@ -1,7 +1,7 @@
 module Cuenta
   class PreAlertasController < BaseController
     before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete paquetes_disponibles agregar_paquete]
-    helper_method :puede_mover?, :puede_eliminar?, :puede_editar?, :puede_buscar?
+    helper_method :puede_mover?, :puede_eliminar?, :puede_editar?, :puede_buscar?, :puede_anular?
 
     def index
       @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
@@ -130,7 +130,15 @@ module Cuenta
       end
     end
 
+    # C34-11 · Con guarda: el cliente anula lo que todavía no llegó. Antes la
+    # acción existía sin link y sin mirar nada.
     def anular
+      unless puede_anular?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede anular: ya recibimos alguno de sus paquetes. Escribinos y la vemos."
+        return
+      end
+
       @pre_alerta.anular!
       redirect_to cuenta_pre_alertas_path, notice: "Pre-alerta anulada."
     end
@@ -225,7 +233,7 @@ module Cuenta
         return
       end
 
-      if pap.paquete_id.present?
+      unless solo_esperado?(pap)
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                     alert: "No se puede eliminar: el paquete ya fue recibido en nuestra bodega."
         return
@@ -517,7 +525,7 @@ module Cuenta
     def puede_mover?(pap)
       return false if @pre_alerta.finalizado?
 
-      if pap.paquete_id.present?
+      if !solo_esperado?(pap)
         # Linked paquetes: cannot move from CKA/CKM, must be in movible estado
         return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
@@ -527,14 +535,31 @@ module Cuenta
       end
     end
 
+    # C34-11 · *"Yo creé una, sólo era una y no me dejaba borrarla."* Desde
+    # PR-D2 (2026-05-08) **todo** renglón nace con su paquete «esperado»
+    # (`PreAlertaPaquete#crear_paquete_esperado`), así que `paquete_id.nil?`
+    # —la regla del 2026-04-16— no se cumplía nunca: ningún renglón guardado se
+    # podía borrar, editar ni mover desde el portal. Lo que importa es si
+    # **llegó**: el esperado sigue en `pre_alerta_estado` hasta que Miami lo
+    # recibe, y al borrar el renglón se anula (`anular_paquete_esperado`).
+    def solo_esperado?(pap)
+      pap.paquete_id.nil? || pap.paquete&.estado == "pre_alerta_estado"
+    end
+
     def puede_eliminar?(pap)
       return false if @pre_alerta.finalizado?
-      pap.paquete_id.nil?
+      solo_esperado?(pap)
     end
 
     def puede_editar?(pap)
       return false if @pre_alerta.finalizado?
-      pap.paquete_id.nil?
+      solo_esperado?(pap)
+    end
+
+    # La pre-alerta entera, mientras nada llegó a Miami.
+    def puede_anular?
+      return false if @pre_alerta.finalizado? || @pre_alerta.anulado?
+      @pre_alerta.pre_alerta_paquetes.includes(:paquete).all? { |pap| solo_esperado?(pap) }
     end
 
     def destino_valido?(pap, destino)

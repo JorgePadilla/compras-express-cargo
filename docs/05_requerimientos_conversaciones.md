@@ -14068,6 +14068,17 @@ consolidado y solo es uno, creo… ya voy a ver eso"*. En el portal,
 pre-alerta está finalizada o el renglón ya tiene paquete. Falta ver si era eso
 o la pre-alerta entera, y desde qué pantalla.
 
+▶ **2026-10-31 (`PR-C34.11`).** Era eso, y le pasaba a **todos**: desde PR-D2
+(2026-05-08) cada renglón nace con su paquete «esperado», así que «ya tiene
+paquete» se cumplía siempre. Ningún renglón guardado se podía borrar, editar ni
+mover desde el portal, y con un solo renglón no había forma de deshacerse de la
+pre-alerta: la acción de anular existía, pero sin link. Ahora la pregunta es si
+**llegó a Miami** (el esperado sigue en `pre_alerta_estado` hasta que Miami lo
+recibe). Al borrar el renglón, el esperado se anula. Y «Anular pre-alerta» está
+en la edición del portal mientras nada llegó, con la misma guarda en la acción.
+Los tests de antes usaban fixtures, que no crean el esperado, y por eso no se
+veía.
+
 #### C34-12 · Dicho de pasada (contexto, sin pedido)
 
 - **Más sucursales** (min 18–30): *"si queremos crecer, necesitamos abrir
@@ -14143,7 +14154,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ✅ ▶ **2026-10-31**: el modal (`PR-C34.7`) y el aviso al recibir, a la hora de quien recibe (`PR-C34.9`). Se avisa con **todas** sus cajas; `RP-108` puede cambiarlo |
 | `C34-09` | Instrucciones del cliente solo para Miami | ✅ ▶ **2026-10-31** (`PR-C34.5`): fuera de medición (también la nota de grupo); «Instrucciones para Miami» en portal y personal |
 | `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ◐ ▶ **2026-10-31** (`PR-C34.6`): `notas_medicion` hecha. Falta ordenar la ficha, y las frases esperan `RP-113` |
-| `C34-11` | La pre-alerta que no se dejaba borrar | ❓ A reproducir |
+| `C34-11` | La pre-alerta que no se dejaba borrar | ✅ ▶ **2026-10-31** (`PR-C34.11`): reproducido; ningún renglón guardado se podía borrar. Se borra lo que no llegó, y la pre-alerta entera se anula desde el portal |
 | Lista 7 | Cobrar como sin reempaque con la tarifa CKA/CKM del cliente, con PIN | ❌ Falta (`RP-115`) |
 | Lista 8, 9, 10, 11 | Aviso de tarifa especial / sin mínimo; aviso de Tegucigalpa; F10; número de pre-alerta en la etiqueta de recepción | ❌ Falta. Aprobados |
 | Lista 21 | Desconocidos: corregir sin reprocesar | ❓ `RP-117` |
