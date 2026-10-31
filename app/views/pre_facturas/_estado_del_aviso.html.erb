@@ -18,6 +18,9 @@
     <% else %>
       <span class="text-sm text-gray-600">Aviso enviado <%= pf.notificado_at.strftime("%d/%m %H:%M") %></span>
     <% end %>
+  <%# C34-08 · Disponible y en camino a su sucursal: avisa la recepción allá. %>
+  <% when :espera_sucursal %>
+    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/10 text-cec-navy">Espera llegar a <%= pf.sucursal_que_espera&.nombre || "su sucursal" %></span>
   <% when :consolidando %>
     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/20 text-cec-navy">Consolidando</span>
   <% when :error %>

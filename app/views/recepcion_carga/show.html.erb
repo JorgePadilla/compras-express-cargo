@@ -54,6 +54,30 @@
       columna: el paquete se mueve al escanearlo, así que lo que falta se
       reconoce solo porque sigue en «enviado a sucursal». %>
   <% if @manifiesto.tipo_interno? %>
+    <%# C34-08 · C33-04 · La hora del aviso la pone quien recibe: *"¿a qué hora
+        es lo notificado? Tal hora"*. Sin tocarla, sale a la ventana
+        (`NotificarLlegadaASucursal.ventana_minutos`) después del primer
+        paquete. %>
+    <% hora = @manifiesto.aviso_llegada_at %>
+    <%= form_with url: hora_aviso_recepcion_carga_path(@manifiesto), method: :patch,
+          class: "bg-white rounded-lg shadow mb-6 p-6 flex flex-wrap items-end gap-3", data: { turbo: false } do %>
+      <div>
+        <%= label_tag :hora_aviso, "Avisar a los clientes a las", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%# El picker del proyecto, solo hora, como la hoja de preparación. %>
+        <%= text_field_tag :hora, hora&.strftime("%H:%M"), id: "hora_aviso", required: true, autocomplete: "off",
+              data: { controller: "flatpickr", flatpickr_solo_hora_value: true },
+              class: "block min-h-11 rounded-lg border-gray-300 shadow-sm text-lg font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <%= render ButtonComponent.new(type: "submit", variant: :primary, size: :md, icon: "clock") do %>Guardar la hora<% end %>
+      <p class="text-sm text-gray-600 basis-full" data-hora-aviso>
+        <% if hora %>
+          El aviso sale a las <b><%= hora.strftime("%H:%M") %></b><%= " (#{hora.strftime('%d/%m')})" unless hora.to_date == Date.current %>: la pre-factura de cada cliente, cuando le llegó todo.
+        <% else %>
+          Sin hora puesta: sale <%= NotificarLlegadaASucursal.ventana_minutos %> minutos después del primer paquete escaneado.
+        <% end %>
+      </p>
+    <% end %>
+
     <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
       <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900">Paquetes del manifiesto</h2>

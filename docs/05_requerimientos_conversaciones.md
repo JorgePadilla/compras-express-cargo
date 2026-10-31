@@ -13362,6 +13362,10 @@ ejemplo: Choluteca pasaría por San Pedro y Tegucigalpa antes de llegar.
 - El manifiesto interno toma la carga **desde** `disponible_entrega`
   (`Manifiesto`, comentario de la l. 490).
 - Al recibirlo en destino, `NotificarLlegadaASucursal` avisa otra vez.
+  ⚠️ **Corrección del 2026-10-31:** no avisaba. `hacer_disponible!` sellaba
+  `llegada_notificada_at` en el F9, y la recepción solo avisa lo que no tiene
+  ese sello: el cliente de Tegucigalpa recibía **un** correo, el del F9, con
+  la carga en San Pedro, y nada al llegar.
 - O sea: el cliente de Tegucigalpa recibe «disponible» cuando la carga sigue
   en San Pedro, y después un segundo aviso cuando llega. Es justo lo que
   Yusef no quiere, y por eso el personal aprieta F8.
@@ -13596,7 +13600,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-01` | La planilla de notificaciones, como lista de trabajo | 📄 Las filas abajo; el texto de cada correo lo da Yusef |
 | `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ✅ El primer correo de cada pre-alerta, del portal o del personal; la casilla se cambia en `Configuracion` si `RP-109` dice otra |
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ✅ `ResumenDeEnviados`, 18:00 de Honduras; texto provisional hasta la plantilla de Yusef |
-| `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado. ▶ **2026-10-30** (`C34-08`): Yusef contestó la mitad: siempre F9, avisa la recepción en destino y la hora la pone quien recibe. Lo de todas las etiquetas sigue en `RP-108` |
+| `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ✅ ▶ **2026-10-31** (`PR-C34.9`): el F9 no avisa; avisa la recepción en destino, a la hora que pone quien recibe, con todas sus cajas. Antes: ▶ **2026-10-30** (`C34-08`): Yusef contestó la mitad: siempre F9, avisa la recepción en destino y la hora la pone quien recibe. Lo de todas las etiquetas sigue en `RP-108` |
 | `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ✅ `CasilleroMailer` y «Mis Direcciones»; el texto es provisional hasta la plantilla de Yusef |
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
@@ -13932,6 +13936,22 @@ Con eso, `C33-04` queda así:
 
 Sigue abierto si espera **todas** las etiquetas grandes de la pre-factura.
 
+▶ **2026-10-31 (`PR-C34.9`).** Construido así:
+- **F9 de un cliente cuya carga no está donde retira**: confirma y pasa a
+  `disponible_entrega` (el interno solo se lleva lo disponible), pero **no**
+  le manda correo ni sella `llegada_notificada_at`. La pre-factura queda
+  «Espera llegar a Humuya TGU» (`espera_llegada_at`). Se compara la sucursal de
+  retiro de cada caja con dónde está (`sucursal_actual`), no con «San Pedro»:
+  un oficial que aterriza directo en Tegucigalpa avisa al F9, como siempre.
+- **Al recibir el interno en destino**: esa pre-factura recibe **su** correo de
+  siempre (`PreFacturaMailer.disponible`, con el monto) cuando le llegaron
+  **todas** sus cajas. La que llegó a medias espera al resto: es la lectura de
+  «todas las etiquetas grandes» mientras `RP-108` no diga otra cosa.
+- **La hora la pone quien recibe**: en «Recibir» del interno, «Avisar a los
+  clientes a las [hora]». Con hora puesta, ni la ventana ni «Terminar» avisan
+  antes: avisa el barrido de cada minuto, a esa hora. Sin hora, sigue la
+  ventana de 30 minutos y el cierre, como antes.
+
 **El modal de «va para…».** El equipo quiere saber adónde va antes de elegir
 F8 o F9, por el caso de la nota «dejar en San Pedro» (`C33-09`): *"un modal que
 le diga para dónde va… cuando escanean el QR de peso… y al final, cuando
@@ -14120,7 +14140,7 @@ del portal ya va por pasos; a la de ellos le falta el tipo de servicio.
 | `C34-05` | El consolidado que se mide en partes: sumar al anterior | ✅ ▶ **2026-10-31** (`PR-C34.4`): medir de nuevo todo junto también después de F8; la consolidando se anula y queda un solo peso |
 | `C34-06` | Contador «5 de 6»: cuenta el apartado y no trae lo medido antes | ✅ ▶ **2026-10-31** (`PR-C34.3`): contaba dos veces el medido que volvía a la mesa; ahora es el total menos lo que falta, y lo medido antes se ve |
 | `C34-07` | «Grupo incompleto» frena el arranque del consolidado; el PIN de medición no pasa a pre-factura | ✅ ▶ **2026-10-31** (`PR-C34.1`): F8 arranca con lo que hay, F9 pregunta, el PIN de medición sella «facturar lo que hay» |
-| `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ❌ Falta (es `C33-04`). Lo de todas las etiquetas grandes sigue en `RP-108` |
+| `C34-08` | Sucursal externa: F9 siempre, avisa la recepción en destino, la hora la pone quien recibe; modal de «va para…» | ✅ ▶ **2026-10-31**: el modal (`PR-C34.7`) y el aviso al recibir, a la hora de quien recibe (`PR-C34.9`). Se avisa con **todas** sus cajas; `RP-108` puede cambiarlo |
 | `C34-09` | Instrucciones del cliente solo para Miami | ✅ ▶ **2026-10-31** (`PR-C34.5`): fuera de medición (también la nota de grupo); «Instrucciones para Miami» en portal y personal |
 | `C34-10` | `notas_medicion` en el cliente; ficha ordenada; notas de un toque en la pre-factura | ◐ ▶ **2026-10-31** (`PR-C34.6`): `notas_medicion` hecha. Falta ordenar la ficha, y las frases esperan `RP-113` |
 | `C34-11` | La pre-alerta que no se dejaba borrar | ❓ A reproducir |

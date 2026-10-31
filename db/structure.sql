@@ -1753,7 +1753,8 @@ CREATE TABLE public.manifiestos (
     aviso_llegada_programado_at timestamp(6) without time zone,
     edicion_abierta_por_id bigint,
     edicion_abierta_at timestamp(6) without time zone,
-    fecha_posible_entrega date
+    fecha_posible_entrega date,
+    aviso_llegada_at timestamp(6) without time zone
 );
 
 
@@ -2537,6 +2538,7 @@ CREATE TABLE public.pre_facturas (
     notificacion_error text,
     factura_id bigint,
     etiquetas integer,
+    espera_llegada_at timestamp(6) without time zone,
     CONSTRAINT pre_facturas_etiquetas_rango CHECK (((etiquetas IS NULL) OR ((etiquetas >= 1) AND (etiquetas <= 99))))
 );
 
@@ -8898,6 +8900,7 @@ ALTER TABLE ONLY public.manifiesto_sucursales_entrega
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261031130000'),
 ('20261031120000'),
 ('20261025190000'),
 ('20261025180000'),

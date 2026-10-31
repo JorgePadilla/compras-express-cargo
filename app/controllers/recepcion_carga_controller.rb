@@ -15,7 +15,7 @@
 # volumen: *"como solo son **5 o 10 cajas** lo más que se recibe"*.
 class RecepcionCargaController < ApplicationController
   before_action :authorize_recepcion
-  before_action :set_manifiesto, only: %i[show escanear finalizar documento]
+  before_action :set_manifiesto, only: %i[show escanear finalizar documento hora_aviso]
 
   # *"Solo lo que está como enviado."* Un manifiesto que ya se recibió entero no
   # tiene nada que hacer acá.
@@ -143,9 +143,32 @@ class RecepcionCargaController < ApplicationController
     # son los escaneados después; si no, son todos. La idempotencia está en el
     # paquete (`llegada_notificada_at`), así que un doble submit no repite
     # correos. Ver `NotificarLlegadaASucursal`.
-    avisados = @manifiesto.tipo_interno? ? NotificarLlegadaASucursal.new(@manifiesto).call : 0
+    #
+    # C34-08 · Salvo que quien recibe haya puesto una hora que todavía no
+    # llega: ahí avisa el barrido, a esa hora.
+    avisados = if @manifiesto.tipo_interno? && NotificarLlegadaASucursal.hora_de_avisar?(@manifiesto.reload)
+      NotificarLlegadaASucursal.new(@manifiesto).call
+    else
+      0
+    end
 
     redirect_to recepcion_carga_index_path, notice: aviso_de_cierre(resultado, avisados)
+  end
+
+  # C34-08 · C33-04 · **La hora la pone quien recibe.** Yusef: *"imagínense,
+  # llegan 200 paquetes a Alexis, no va a estar el sistema notificándole en el
+  # acto los 200… recibir carga interna, manifiesto, ¿a qué hora es lo
+  # notificado? Tal hora."* Es de hoy: una hora que ya pasó avisa en el
+  # próximo barrido.
+  def hora_aviso
+    return redirect_to(recepcion_carga_path(@manifiesto), alert: "La hora del aviso es del interno.") unless @manifiesto.tipo_interno?
+
+    hora = Time.zone.parse("#{Date.current.iso8601} #{params[:hora]}") if params[:hora].to_s.match?(/\A\d{1,2}:\d{2}\z/)
+    return redirect_to(recepcion_carga_path(@manifiesto), alert: "Poné la hora como 14:30.") if hora.nil?
+
+    @manifiesto.update_columns(aviso_llegada_at: hora)
+    redirect_to recepcion_carga_path(@manifiesto),
+                notice: "Se les avisa a los clientes a las #{hora.strftime('%H:%M')}."
   end
 
   private
@@ -263,7 +286,12 @@ class RecepcionCargaController < ApplicationController
   def aviso_de_cierre(resultado, avisados)
     if @manifiesto.tipo_interno?
       pendientes = " · #{resultado.faltantes.size} paquete(s) quedaron señalados como pendientes" if resultado.faltantes.any?
-      "#{@manifiesto.numero} recibido. Se avisó a #{avisados} cliente(s)#{pendientes}."
+      cuando = if avisados.zero? && @manifiesto.aviso_llegada_at&.future?
+        "El aviso a los clientes sale a las #{@manifiesto.aviso_llegada_at.strftime('%H:%M')}"
+      else
+        "Se avisó a #{avisados} cliente(s)"
+      end
+      "#{@manifiesto.numero} recibido. #{cuando}#{pendientes}."
     else
       "#{@manifiesto.numero} recibido#{" con #{resultado.faltantes.size} caja(s) pendiente(s)" if resultado.faltantes.any?}."
     end

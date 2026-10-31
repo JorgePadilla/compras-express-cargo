@@ -7,6 +7,10 @@ class NotificarLlegadaASucursalJob < ApplicationJob
   queue_as :default
 
   def perform(manifiesto)
+    # C34-08 · Si quien recibe puso una hora que todavía no llega, la ventana
+    # no se adelanta: avisa el barrido, a esa hora.
+    return unless NotificarLlegadaASucursal.hora_de_avisar?(manifiesto.reload)
+
     NotificarLlegadaASucursal.new(manifiesto).call
   end
 end
