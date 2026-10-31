@@ -56,6 +56,10 @@
     <%= TipoEnvio.where(id: @hoja.tipo_envio_ids).order(:nombre).pluck(:nombre).join(", ") %> ·
     <%= Manifiesto.where(id: @hoja.manifiesto_ids).order(:numero).pluck(:numero).join(", ") %> ·
     aviso el <%= @hoja.disponible_en.strftime("%d/%m/%Y a las %H:%M") %>
+    <%# PR-P.12 · Si la hora ya pasó, F9 avisa al instante: que se sepa. %>
+    <% if @hoja.disponible_en <= Time.current %>
+      · <span class="font-semibold text-amber-800 dark:text-amber-300" data-hora-pasada>esa hora ya pasó: F9 avisa al instante</span>
+    <% end %>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
