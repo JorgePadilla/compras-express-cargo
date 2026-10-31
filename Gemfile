@@ -69,6 +69,9 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  # PR-A11Y.8 · axe-core corre dentro del Chrome de los system tests y dice
+  # qué rompe WCAG en cada pantalla (`test/system/accesibilidad_test.rb`).
+  gem "axe-core-capybara", "~> 4.14"
 end
 
 gem "barby", "~> 0.6"
