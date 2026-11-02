@@ -23,6 +23,20 @@ class AccesoDelClienteTest < ActionDispatch::IntegrationTest
     assert_redirected_to cuenta_root_path
   end
 
+  # C33-06 · Yusef, 2026-10-24, con la cuenta `C1`: *"¿será por la
+  # mayúscula?… la gente no entiende"*.
+  test "el codigo entra aunque lo escriba en minuscula" do
+    post session_url, params: { email_address: @cliente.codigo.downcase, password: "Cliente123!" }
+
+    assert_redirected_to cuenta_root_path
+  end
+
+  test "en minuscula y con la clave equivocada no entra" do
+    post session_url, params: { email_address: @cliente.codigo.downcase, password: "otra" }
+
+    assert_redirected_to new_session_path
+  end
+
   test "y con su correo, como siempre" do
     post session_url, params: { email_address: @cliente.email, password: "Cliente123!" }
 

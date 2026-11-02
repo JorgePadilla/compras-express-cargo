@@ -16,9 +16,33 @@
     «Todos los paquetes»: `text-sm`, botones `:md`, tarjetas compactas. %>
 <% campo = "block w-full rounded-lg border border-gray-500 dark:border-gray-400 dark:bg-gray-900 dark:text-gray-100 shadow-sm py-2 text-sm focus:border-cec-teal-deep focus:ring-cec-teal-deep" %>
 <% rotulo = "block text-sm font-medium text-gray-800 dark:text-gray-100 mb-1" %>
+<%# Después de «Buscar», los filtros se pliegan y el foco baja a los
+    resultados. Jorge, 2026-10-24: *"ocultar o minimizar los filtros una vez
+    que presionamos buscar y mover el focus a los resultados"*. Ocupaban toda
+    la primera pantalla y la lista quedaba abajo, sin que el lector de
+    pantalla avisara que había llegado.
+
+    Un `<details>` como el de «Filtros avanzados» de `/paquetes`: se abre con
+    Enter o Espacio y el lector dice si está abierto, sin JS. Plegado, el
+    `summary` dice qué está aplicado, para que una lista corta no parezca un
+    historial vacío. «Se buscó» es el `buscado` del form, y no la presencia de
+    `estados[]`: desmarcarlos todos no los manda. Lo manda también F2, que
+    limpia y busca; y la paginación lo arrastra. %>
+<% buscado = params[:buscado] == "1" %>
+<details class="mb-6 group bg-white dark:bg-gray-800 rounded-lg shadow" <%= "open" unless buscado %> data-filtros="historial">
+  <summary class="list-none [&::-webkit-details-marker]:hidden px-6 py-3 cursor-pointer rounded-lg group-open:rounded-b-none group-open:border-b group-open:border-gray-200 dark:group-open:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 flex items-center gap-3 text-sm foco-cec">
+    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4 shrink-0 text-cec-navy dark:text-cec-gold", "aria-hidden": "true" } %>
+    <span class="font-semibold text-cec-navy dark:text-gray-100">Filtros</span>
+    <span class="min-w-0 truncate text-gray-700 dark:text-gray-200" data-resumen-de-filtros>
+      <%= resumen_de_filtros_del_historial(estados: @estados, empresas: @empresas, tipo_envios: @tipo_envios).join(" · ") %>
+    </span>
+    <span class="ml-auto shrink-0 text-xs font-medium text-cec-teal-deep dark:text-cec-teal-light group-open:hidden">Cambiar filtros</span>
+    <%= heroicon "chevron-down", variant: :solid, options: { class: "w-4 h-4 shrink-0 text-gray-600 dark:text-gray-300 transition-transform duration-200 group-open:rotate-180", "aria-hidden": "true" } %>
+  </summary>
 <%= form_tag historial_manifiestos_path, method: :get, role: "search", "aria-label": "Filtros del historial",
-      class: "mb-6 bg-white dark:bg-gray-800 rounded-lg shadow px-6 py-5 space-y-5",
+      class: "px-6 py-5 space-y-5",
       data: { controller: "f2-clear", f2_clear_submit_value: "true", turbo: false } do %>
+  <%= hidden_field_tag :buscado, "1", id: nil %>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <div>
       <label for="q" class="<%= rotulo %>">Buscar</label>
@@ -92,6 +116,15 @@
     <%= render(ButtonComponent.new(variant: :secondary, href: historial_manifiestos_path, icon: "x-mark")) { "Limpiar filtros" } %>
   </div>
 <% end %>
+</details>
+
+<%# Adonde cae el foco después de buscar: el lector lee el heading entero, y
+    con Tab se sigue desde acá. Visible, para que el que usa teclado vea dónde
+    quedó parado. %>
+<h2 id="resultados" tabindex="-1" class="cec-h2 mb-3 rounded foco-cec"
+    <%= tag.attributes(data: { controller: "enfocar-al-entrar" }) if buscado %>>
+  Resultados · <%= @manifiestos.total_count.zero? ? "ningún manifiesto" : pluralize(@manifiestos.total_count, "manifiesto", plural: "manifiestos") %>
+</h2>
 
 <% if @manifiestos.any? %>
   <%= render PaginationComponent.new(collection: @manifiestos, label: "manifiestos", posicion: :arriba) %>

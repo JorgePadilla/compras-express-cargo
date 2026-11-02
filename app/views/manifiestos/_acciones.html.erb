@@ -64,8 +64,10 @@
         Excel y pasó a ser guardar/finalizar/confirmar en todo el sistema, así
         que «Solo Finalizar» lleva **F8**. «Finalizar e Imprimir» sigue sin
         tecla. %>
+    <%# C34-02 · Enter confirma: *"le di enter y dice cancelar… debería ser al
+        revés"*. Finalizar se corrige con «Editar» (C30-06); no es borrar. %>
     <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F8",
-          href: finalizar_manifiesto_path(manifiesto), method: :patch,
+          href: finalizar_manifiesto_path(manifiesto), method: :patch, data: { confirm_foco: "confirmar" },
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) quedan «#{manifiesto.texto_de_enviado}» y el manifiesto queda bloqueado. ¿Seguro?") do %>
       Solo Finalizar
     <% end %>
@@ -78,7 +80,7 @@
         C31-05 · El confirm de «Solo Finalizar» dice el estado con el nombre
         que pidió Yusef: «Enviado a Honduras» (o a la sucursal, el interno). %>
     <%= render ButtonComponent.new(variant: :gold, icon: "printer",
-          href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch,
+          href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch, data: { confirm_foco: "confirmar" },
           confirm: "Se finaliza #{manifiesto.numero} y sale la hoja del manifiesto para el transportista. ¿Seguro?") do %>
       Finalizar e Imprimir
     <% end %>

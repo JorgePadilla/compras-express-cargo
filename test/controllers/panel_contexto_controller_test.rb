@@ -79,6 +79,8 @@ class PanelContextoControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "El celular por Express, la ropa por maritimo", response.body
+    # C34-09 · Con el título de dónde viene: es la instrucción para Miami.
+    assert_match "Instrucción para Miami", response.body
   end
 
   # C30-10 · La gemela de la PESA: la franja de /etiquetar arma las notas con

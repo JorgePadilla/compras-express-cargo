@@ -47,6 +47,6 @@ class DescartarDeMedicion
   def validar!
     return if @user&.tiene_rol?("admin")
 
-    raise NoPermitido, "Solo un administrador puede sacar una caja de la lista."
+    raise NoPermitido, "Solo un administrador puede sacar un paquete de la lista."
   end
 end

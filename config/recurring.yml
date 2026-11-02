@@ -27,3 +27,10 @@ production:
   hacer_disponibles_programadas:
     class: HacerDisponiblesProgramadasJob
     schedule: every minute
+  # C33-03 · El resumen de las 6 de la tarde: lo que salió hacia Honduras, un
+  # correo por cliente. La zona va en el schedule: fugit la entiende, y sin
+  # ella serían las 6 pm del reloj del servidor (UTC en Render), las 12 del
+  # día en Honduras.
+  resumen_de_enviados:
+    class: ResumenDeEnviadosJob
+    schedule: every day at 6pm America/Tegucigalpa

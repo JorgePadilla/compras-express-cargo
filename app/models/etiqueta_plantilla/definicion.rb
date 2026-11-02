@@ -49,7 +49,11 @@ class EtiquetaPlantilla < ApplicationRecord
       # C20-08: solo sale en entrega personal y recolectas. Yusef: *"es la
       # misma etiqueta, idénticas, no cambia, pero en la entrega personal y
       # recolectas va si va bien pagada o no viene pagada"*.
-      "pago"                => { nombre: "Pagado / No pagado (entrega personal)", apagable: true }
+      "pago"                => { nombre: "Pagado / No pagado (entrega personal)", apagable: true },
+      # C34 · Lista 11 · *"Que las etiquetas de recepción lleven el número de
+      # pre-alerta, no «agrupado»"*. Yusef: *"es hasta bueno, mejor, por
+      # favor… ayudaría para control visual, no tiene que ser tan grande"*.
+      "pre_alerta"          => { nombre: "Pre-alerta consolidada (PA)", apagable: true }
     }.freeze
 
     # La etiqueta de hoy, 1:1. Los `pt` vienen de los tiers --t1..--t7 que
@@ -79,7 +83,9 @@ class EtiquetaPlantilla < ApplicationRecord
         # La etiqueta está al filo: medido en Chrome, una fila más la desborda
         # 13px. Acá cuesta ancho —que sobra— y no alto.
 
-        { "id" => "f-registro",  "campos" => [ "pago", "fecha", "driver", "reg" ] },
+        # C34 · Lista 11 · La pre-alerta consolidada va en este mismo renglón,
+        # por lo mismo: la Dymo no tiene una fila más, y acá cuesta ancho.
+        { "id" => "f-registro",  "campos" => [ "pago", "pre_alerta", "fecha", "driver", "reg" ] },
         # C25-07 · El tercero vive acá: tercera línea de la columna izquierda
         # del bloque, debajo de dónde retira — *"para acá abajo"*. Es su
         # tercer sitio en dos días, y el único que se sostiene con números
@@ -116,7 +122,8 @@ class EtiquetaPlantilla < ApplicationRecord
         "ubicacion"           => { "visible" => true, "pt" => 6.0 },
         "proveedor"           => { "visible" => true, "pt" => 6.5 },
         "tipo_envio"          => { "visible" => true, "pt" => 19.0 },
-        "pago"                => { "visible" => true, "pt" => 6.5 }
+        "pago"                => { "visible" => true, "pt" => 6.5 },
+        "pre_alerta"          => { "visible" => true, "pt" => 6.5 }
       }
     }.freeze
 

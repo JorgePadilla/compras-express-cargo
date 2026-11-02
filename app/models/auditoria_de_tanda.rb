@@ -18,7 +18,8 @@
 # cajas se escanearon y la manda en cada pedido: no hay estado en el servidor
 # entre un escaneo y el siguiente.
 class AuditoriaDeTanda
-  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, keyword_init: true) do
+  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, :grupo_aviso,
+                         :sucursal_aviso, :cliente_aviso, keyword_init: true) do
     def ok? = tipo.in?(%i[ok pertenece])
   end
 
@@ -55,16 +56,18 @@ class AuditoriaDeTanda
     bultos = sesion.present? ? Bulto.de_la_sesion(sesion).to_a : []
     if caja.medido_at.blank? || bultos.empty?
       return Resultado.new(tipo: :sin_medir,
-                           mensaje: "#{codigo_de(caja)} todavía no está medida: medila primero en Medición.")
+                           mensaje: "#{codigo_de(caja)} todavía no está medido: medilo primero en Medición.")
     end
 
-    cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
+    cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio, :manifiesto, :sucursal).order(:id).to_a
     rechazo = rechazo_de_la_tanda(sesion, cajas)
     return rechazo if rechazo
 
     avisos = [ medicion_anterior(codigo, bultos), prepagadas_aviso(cajas) ].compact
     Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: avisos.join(" · ").presence,
-                  mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} caja#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
+                  grupo_aviso: grupo_aviso(cajas, sesion),
+                  sucursal_aviso: self.class.sucursal_aviso(cajas), cliente_aviso: self.class.trato_aviso(cajas),
+                  mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} paquete#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
   end
 
   # Después de medir de nuevo (`C30-11`), la etiqueta **vieja** de un volumen
@@ -89,7 +92,64 @@ class AuditoriaDeTanda
     return nil if n.zero?
 
     simbolico = format("%.2f", PreFactura::PREPAGADO_MIAMI_SIMBOLICO)
-    "#{n} caja#{"s" if n != 1} prepagada#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
+    "#{n} paquete#{"s" if n != 1} prepagado#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
+  end
+
+  # C34-07 · El grupo al que le falta carga ya no frena: se dice qué falta y
+  # dónde está, y el auditor elige. F8 guarda consolidando —*"cliente inicia el
+  # consolidado"*— y F9 pregunta antes de avisar. Una clave aparte de `aviso`:
+  # aquella suena como «etiqueta vieja», y esto no es un error.
+  def grupo_aviso(cajas, sesion)
+    pendientes = self.class.grupos_pendientes(cajas)
+    return nil if pendientes.empty?
+
+    en_pantalla = @sesiones + [ sesion.to_s ]
+    pendientes.map { |g| "#{g.nombre} no está completo: #{g.lo_que_falta(en_pantalla: en_pantalla)}." }
+              .join(" ") + " F8 lo guarda consolidando; F9 pregunta antes de avisar."
+  end
+
+  # C34-08 · Lista 9 · *"Alerta de que el cliente es de Tegucigalpa al iniciar
+  # la pre-factura"*: el modal de «va para…» que el equipo pidió *"cuando
+  # escanean el QR de peso"*. La sucursal es la de la etiqueta de entrega
+  # (`EtiquetaDeEntrega#sucursal`): la de los paquetes, o la del cliente.
+  # San Pedro —la de por defecto— no avisa.
+  def self.sucursal_aviso(cajas)
+    sucursal = sucursal_de_retiro(cajas)
+    return nil if sucursal.nil? || sucursal == Sucursal.para_cliente_nuevo
+
+    "Va para #{sucursal.nombre}: este cliente retira allá."
+  end
+
+  def self.sucursal_de_retiro(cajas)
+    de_paquetes = cajas.filter_map(&:sucursal)
+    return de_paquetes.tally.max_by { |_s, n| n }.first if de_paquetes.any?
+
+    cajas.first&.cliente&.sucursal_retiro
+  end
+
+  # Lista 8 · *"Alerta al iniciar la pre-factura si el cliente tiene tarifa
+  # especial o no paga mínimo"*. Yusef: *"podemos poner ahí: cliente no paga
+  # mínimo"*, al escanear el QR de peso. Es la tarifa **propia** del cliente
+  # en el servicio de la tanda —el primer escalón de `Tarifa.resolver`—, no la
+  # de su categoría.
+  def self.trato_aviso(cajas)
+    cliente = cajas.first&.cliente
+    tipo = cajas.first&.tipo_envio
+    return nil if cliente.nil? || tipo.nil?
+
+    propias = Tarifa.activas.where(cliente_id: cliente.id, tipo_envio_id: tipo.id).to_a
+    partes = []
+    partes << "tiene tarifa especial en #{tipo.nombre}" if propias.any?
+    partes << "no paga mínimo" if propias.any? && propias.none?(&:aplica_minimo)
+    partes << "se le cobra solo el volumétrico" if cliente.cobra_solo_volumetrico?(tipo)
+    return nil if partes.empty?
+
+    "#{cliente.codigo}: #{partes.to_sentence(two_words_connector: ' y ', last_word_connector: ' y ')}."
+  end
+
+  # Los grupos de estas cajas a los que les falta algo, uno por grupo.
+  def self.grupos_pendientes(cajas)
+    cajas.filter_map(&:grupo_pendiente).uniq(&:clave)
   end
 
   # ── Una caja (la etiqueta de Miami) ─────────────────────────────────────
@@ -109,7 +169,7 @@ class AuditoriaDeTanda
     end
 
     if Array(escaneadas).map(&:to_i).include?(caja.id)
-      return Resultado.new(tipo: :ya_escaneada, caja: caja, mensaje: "#{codigo_de(caja)} ya la escaneaste.")
+      return Resultado.new(tipo: :ya_escaneada, caja: caja, mensaje: "#{codigo_de(caja)} ya lo escaneaste.")
     end
 
     Resultado.new(tipo: :pertenece, caja: caja, mensaje: "#{codigo_de(caja)} pertenece.")
@@ -134,10 +194,12 @@ class AuditoriaDeTanda
                            mensaje: "#{codigo_de(con_pf)} ya está en la pre-factura #{pf&.numero}.")
     end
 
-    if (sin_listo = cajas.find { |c| !c.listo_para_prefactura? })
-      return Resultado.new(tipo: :grupo_incompleto,
-                           mensaje: "#{codigo_de(sin_listo)} es de un grupo que todavía no está completo: " \
-                                    "falta medir lo demás, o que un supervisor autorice facturar lo que hay.")
+    # C34-07 · Lo que traba es **no estar medido**. El grupo incompleto dejó
+    # de trabar acá (`grupo_aviso`): antes, la primera tanda de un consolidado
+    # no llegaba nunca a crear la pre-factura que F8 después reabre.
+    if (sin_medir = cajas.find { |c| c.medido_at.blank? })
+      return Resultado.new(tipo: :sin_medir,
+                           mensaje: "#{codigo_de(sin_medir)} todavía no está medido: medilo primero en Medición.")
     end
 
     # El servicio tiene que ser uno de los de la hoja.

@@ -31,7 +31,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
 
     escanear @qr
     assert_text @cliente.codigo, wait: 5
-    assert_text "1 volumen · 2 cajas · faltan 2"
+    assert_text "1 volumen · 2 paquetes · faltan 2"
 
     escanear @cajas.first.tracking
     assert_text "faltan 1", wait: 5
@@ -58,7 +58,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     preparar_la_hoja
 
     pegar @qr
-    assert_text "1 volumen · 2 cajas · faltan 2", wait: 5
+    assert_text "1 volumen · 2 paquetes · faltan 2", wait: 5
     assert_equal "", find("#codigo_auditoria").value
 
     pegar @cajas.first.tracking
@@ -100,7 +100,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     visit auditar_pre_factura_index_path
     escanear @qr
 
-    assert_text "2 cajas prepagadas en Miami: se cobra el simbólico de US$1.00 c/u", wait: 5
+    assert_text "2 paquetes prepagados en Miami: se cobra el simbólico de US$1.00 c/u", wait: 5
     assert_text "PREPAGADO EN MIAMI"
   end
 
@@ -143,6 +143,68 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_equal [ 15, 20 ], [ pf.notificar_at.hour, pf.notificar_at.min ]
     assert_equal [ @bulto.id, nuevo.id ].sort, pf.pre_factura_items.where(origen: "volumen").pluck(:bulto_id).sort
     assert_equal "en_aduana", nueva.reload.estado
+  end
+
+  # C34-07 · Lista 14 · El consolidado al que le falta uno: el volumen entra
+  # con el aviso, y F9 pregunta antes de avisar. Antes salía «es de un grupo
+  # que todavía no está completo» y no se podía ni empezar.
+  test "consolidado incompleto: se audita con el aviso y F9 pregunta «¿está seguro?»" do
+    pa = PreAlerta.create!(numero_documento: "PA-SYS#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: @cer, consolidado: true, con_reempaque: true, estado: "pre_alerta",
+                           titulo: "Consolidado", creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    %w[1ZSYSCONS000001 1ZSYSCONS000002].each { |t| pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Bulto", fecha: Date.current) }
+    una = pa.pre_alerta_paquetes.order(:id).first.paquete
+    una.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
+    una.reload.update!(estado: "en_aduana", manifiesto: @manifiesto, peso: 2)
+    MedirBulto.new(user: @user).guardar!(paquete_ids: [ una.id ], volumenes: [ { peso: "2" } ])
+
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+    escanear "MED #{una.reload.tracking} 2.00"
+    assert_text "#{pa.numero_documento} no está completo: falta 1 que no ha llegado a Miami", wait: 5
+    escanear una.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    page.driver.browser.action.send_keys(:f9).perform
+    find("[data-auditar-pre-factura-target='etiquetasModal'][open]", wait: 5)
+    page.driver.browser.action.send_keys(:enter).perform
+    assert_selector "[data-auditar-pre-factura-target='preguntaModal'][open]", text: "¿Está seguro que desea notificarlo?", wait: 5
+    assert_not PreFactura.where(auditado_por: @user).exists?, "la pregunta no guarda"
+
+    window_opened_by { click_on "Sí, notificar" }
+    hasta_que("el «Sí» no guardó") { PreFactura.where(auditado_por: @user).where.not(notificar_at: nil).exists? }
+    assert_equal PreFactura.where(auditado_por: @user).last.id, una.reload.pre_factura_id
+  end
+
+  # C34-08 · Lista 9 · *"Un modal que le diga para dónde va… cuando escanean
+  # el QR de peso… y al final, cuando impriman la etiqueta también"*.
+  test "el cliente de otra sucursal: modal rojo al escanear el volumen, y lo repite al imprimir" do
+    @cajas.each { |c| c.update_columns(sucursal_id: sucursales(:humuya_tgu).id) }
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+
+    escanear @qr
+    assert_selector "[data-auditar-pre-factura-target='sucursalModal'][open]", text: "Va para Humuya TGU", wait: 5
+    page.driver.browser.action.send_keys(:enter).perform
+    assert_no_selector "[data-auditar-pre-factura-target='sucursalModal'][open]", wait: 5
+
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+    page.driver.browser.action.send_keys(:f9).perform
+    assert_selector "[data-auditar-pre-factura-target='etiquetasModal'][open]", text: "Va para Humuya TGU", wait: 5
+  end
+
+  # C34 · Lista 10 · *"Para Tegucigalpa, una sola tecla que imprima la orden y
+  # la etiqueta"* — *"buen punto, que creemos F10"*.
+  test "F10 pregunta cuántas etiquetas y abre la etiqueta que encadena la orden" do
+    preparar_la_hoja(fecha: 1.day.from_now.to_date.iso8601)
+    escanear @qr
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    nueva = cuantas_etiquetas(:f10, esperadas: 1)
+    hasta_que("F10 no guardó") { PreFactura.where(auditado_por: @user).where.not(notificar_at: nil).exists? }
+    within_window(nueva) { assert_includes current_url, "orden=1" }
   end
 
   # C31-17 · *"Cuántas etiquetas el F9"*: se cambia el número, sale con eso
@@ -197,9 +259,12 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
 
   def preparar_la_hoja(hora: "07:30", fecha: nil)
     visit hoja_de_preparacion_path
+    # PR-P.12 · Tildar el servicio trae sus manifiestos, y tildar el
+    # manifiesto guarda la hoja: se espera a que la página vuelva con él
+    # marcado (el atributo `checked` lo pone el servidor, no el clic).
     find("label", text: @cer.nombre, exact_text: true).click
-    click_on "Ver manifiestos"
-    find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).check
+    find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all, wait: 5).check
+    assert_selector "#hoja_manifiesto_#{@manifiesto.id}[checked]", visible: :all, wait: 5
     page.execute_script("document.querySelector('#hoja_hora')._flatpickr.setDate('#{hora}', true)")
     page.execute_script("document.querySelector('#hoja_fecha')._flatpickr.setDate('#{fecha}', true)") if fecha
     # C31-16 · Un solo botón: guarda la hoja y entra a auditar.

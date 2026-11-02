@@ -1,0 +1,34 @@
+<%= render PageHeaderComponent.new(title: "Mis Direcciones", subtitle: "Casillero #{current_cliente.codigo}") %>
+
+<p class="mb-6 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+  Cuando compre en línea, use esta dirección de envío tal cual, con la <strong>Línea 2</strong> del servicio que quiere.
+  Así su paquete llega a su nombre y sale por ese servicio.
+</p>
+
+<% bloques = @direcciones.bloques %>
+<% if bloques.any? %>
+  <div class="grid gap-6 lg:grid-cols-2">
+    <% bloques.each_with_index do |bloque, i| %>
+      <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" aria-labelledby="direccion-<%= i %>"
+               data-controller="clipboard" data-clipboard-text-value="<%= bloque.texto %>">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 id="direccion-<%= i %>" class="cec-h2"><%= bloque.titulo %></h2>
+            <% if bloque.descripcion.present? %>
+              <p class="text-xs text-gray-500 dark:text-gray-400"><%= bloque.descripcion %></p>
+            <% end %>
+          </div>
+          <%= copy_button(label: "Copiar la dirección de #{bloque.titulo}", tamano: :fila) %>
+        </div>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <% bloque.campos.each do |etiqueta, valor| %>
+            <dt class="text-gray-500 dark:text-gray-400"><%= etiqueta %></dt>
+            <dd class="font-mono text-gray-900 dark:text-gray-100 break-words"><%= valor %></dd>
+          <% end %>
+        </dl>
+      </section>
+    <% end %>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "Todavía no hay direcciones cargadas", description: "Comuníquese con Compras Express para recibir la dirección de su casillero.") %>
+<% end %>

@@ -523,7 +523,7 @@
 
       <% pap = paquete.pre_alerta_paquetes.first %>
       <div>
-        <%= label_tag "paquete_pap_instrucciones", "Instrucciones Especiales",
+        <%= label_tag "paquete_pap_instrucciones", "Instrucciones para Miami",
             class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <% if pap %>
           <%= text_area_tag "paquete[pap_instrucciones]", pap.instrucciones, rows: 2,

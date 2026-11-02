@@ -43,6 +43,7 @@
           <label class="flex items-start gap-3 <%= "cursor-pointer" if @hoja.nuevas? %>">
             <% if @hoja.nuevas? %>
               <%= check_box_tag "hoja[manifiesto_ids][]", m.id, @hoja.manifiesto_ids.include?(m.id),
+                    data: { action: "change->auto-envio#enviar" },
                     id: "hoja_manifiesto_#{m.id}", class: "mt-1 rounded border-gray-300 text-cec-navy focus:ring-cec-teal" %>
             <% end %>
             <span class="flex-1">
@@ -89,6 +90,7 @@
           <label class="flex items-start gap-3 <%= "cursor-pointer" if @hoja.nuevas? %>">
             <% if @hoja.nuevas? %>
               <%= check_box_tag "hoja[sin_manifiesto]", "1", @hoja.sin_manifiesto?,
+                  data: { action: "change->auto-envio#enviar" },
                     id: "hoja_sin_manifiesto", class: "mt-1 rounded border-gray-300 text-cec-navy focus:ring-cec-teal" %>
             <% end %>
             <span class="flex-1">

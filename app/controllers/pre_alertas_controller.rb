@@ -55,6 +55,9 @@ class PreAlertasController < ApplicationController
     @pre_alerta.creado_por_id = Current.user.id
 
     if @pre_alerta.save
+      # C33-02 · La que crea el personal también le avisa al cliente, con la
+      # copia a SAC, igual que la del portal. Antes no salía ningún correo.
+      @pre_alerta.enviar_confirmacion
       redirect_to pre_alerta_path(@pre_alerta), notice: "Pre-Alerta #{@pre_alerta.numero_documento} creada exitosamente."
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)

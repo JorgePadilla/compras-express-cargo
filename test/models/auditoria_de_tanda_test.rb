@@ -44,7 +44,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal uno.sesion, r.sesion
     assert_equal [ uno, dos ], r.bultos
     assert_equal cajas.map(&:id).sort, r.cajas.map(&:id).sort
-    assert_match(/2 volúmenes · 3 cajas/, r.mensaje)
+    assert_match(/2 volúmenes · 3 paquetes/, r.mensaje)
   end
 
   # Después de medir de nuevo (C30-11): la etiqueta vieja sigue resolviendo a
@@ -82,7 +82,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     r = auditoria.volumen("MED #{sin_medir.tracking} 1.00")
 
     assert_equal :sin_medir, r.tipo
-    assert_match(/medila primero/, r.mensaje)
+    assert_match(/medilo primero/, r.mensaje)
   end
 
   test "ya está en una pre-factura: se dice cuál, para abrirla" do
@@ -97,12 +97,14 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal pf, r.pre_factura
   end
 
-  test "un grupo que todavía no está completo no se pre-factura" do
+  # C34-07 · Lo que traba es una caja sin medir. El grupo incompleto ya no
+  # traba: lo cuenta `consolidado_arranca_con_f8_test.rb`.
+  test "una caja de la tanda sin medir no se pre-factura" do
     cajas = 2.times.map { caja }
     medir(cajas, { peso: "2" })
     cajas.last.update_columns(medido_at: nil)
 
-    assert_equal :grupo_incompleto, auditoria.volumen(qr(cajas.first)).tipo
+    assert_equal :sin_medir, auditoria.volumen(qr(cajas.first)).tipo
   end
 
   # C31-14 · Cierra `RP-85`. Yusef: *"todo debe dejarte meter de otros
@@ -126,7 +128,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
 
     r = auditoria.volumen("#{qr(cajas.first)}")
     assert_equal :ok, r.tipo
-    assert_match(/2 cajas prepagadas en Miami: se cobra el simbólico de US\$1\.00 c\/u/, r.aviso)
+    assert_match(/2 paquetes prepagados en Miami: se cobra el simbólico de US\$1\.00 c\/u/, r.aviso)
   end
 
   test "el aviso del prepago va junto con el de la etiqueta vieja" do
@@ -135,7 +137,7 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
 
     r = auditoria.volumen(qr(cajas.first)) # sin «n de m»: dice 1, la tanda tiene 2
     assert_match(/medición anterior/, r.aviso)
-    assert_match(/1 caja prepagada en Miami/, r.aviso)
+    assert_match(/1 paquete prepagado en Miami/, r.aviso)
   end
 
   test "una tanda que mezcla prepagadas y no prepagadas se rechaza: medila de nuevo" do
@@ -231,6 +233,30 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     medir(dos, { peso: "3" })
 
     assert_equal :ok, auditoria([ a.sesion ]).volumen(qr(dos.first)).tipo
+  end
+
+  # ── C34-08 · Lista 8 y 9 · Lo que el auditor tiene que saber al escanear ──
+
+  test "lista 9 · el cliente de otra sucursal avisa adónde va; San Pedro no" do
+    tegus = caja(sucursal: sucursales(:humuya_tgu))
+    medir([ tegus ], { peso: "2" })
+    assert_equal "Va para Humuya TGU: este cliente retira allá.", auditoria.volumen(qr(tegus)).sucursal_aviso
+
+    sps = caja(sucursal: sucursales(:zeron_sps))
+    medir([ sps ], { peso: "2" })
+    assert_nil auditoria.volumen(qr(sps)).sucursal_aviso
+  end
+
+  test "lista 8 · la tarifa propia del cliente, y si no paga mínimo, se dicen" do
+    una = caja
+    medir([ una ], { peso: "2" })
+    assert_nil auditoria.volumen(qr(una)).cliente_aviso, "sin tarifa propia no hay nada que decir"
+
+    Tarifa.create!(tipo_envio: @cer, cliente: @cliente, precio_libra: 3.00, moneda: "USD", aplica_minimo: false)
+
+    aviso = auditoria.volumen(qr(una)).cliente_aviso
+    assert_includes aviso, "tiene tarifa especial en #{@cer.nombre}"
+    assert_includes aviso, "no paga mínimo"
   end
 
   # ── Las cajas ──────────────────────────────────────────────────────────

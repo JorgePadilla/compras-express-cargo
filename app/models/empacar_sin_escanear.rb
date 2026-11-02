@@ -115,7 +115,7 @@ class EmpacarSinEscanear
     Manifiesto.transaction do
       candidatos.find_each do |paquete|
         cambios = @manifiesto.cambios_al_entrar(paquete)
-        trabados << paquete if @manifiesto.tipo_oficial? && !cambios.key?(:estado)
+        trabados << paquete if trabado?(paquete, cambios)
         paquete.update!(manifiesto: @manifiesto, **cambios)
         agregados += 1
       end
@@ -124,6 +124,15 @@ class EmpacarSinEscanear
     end
 
     Resultado.new(agregados: agregados, trabados: trabados)
+  end
+
+  # En el oficial, el que no avanza a `empacado`. En el interno el estado no
+  # cambia al entrar, así que se mira la tarea: C33-09, la nota «dejar en San
+  # Pedro» que nadie leyó. Antes entraba callado y recién lo decía el cierre.
+  def trabado?(paquete, cambios)
+    return paquete.tareas_bloqueantes_pendientes? if @manifiesto.tipo_interno?
+
+    !cambios.key?(:estado)
   end
 
   # El estado que Yusef nombró, con su nombre. Vive acá y no suelto en el

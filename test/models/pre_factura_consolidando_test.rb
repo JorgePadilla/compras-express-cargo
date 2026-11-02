@@ -124,7 +124,7 @@ class PreFacturaConsolidandoTest < ActiveSupport::TestCase
     error = assert_raises(GuardarPreFacturaAuditada::NoSePuede) do
       guardar([ @bulto.sesion, nuevo.sesion ], [ nuevas.first.id ], modo: :avisar, pre_factura_id: pf.id)
     end
-    assert_match(/Faltan 1 caja/, error.message)
+    assert_match(/Faltan 1 paquete/, error.message)
   end
 
   test "una tanda de otro servicio no se le agrega" do
