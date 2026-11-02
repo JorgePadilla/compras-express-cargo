@@ -1,0 +1,8 @@
+Hola <%= @cliente.nombre_completo %>,
+
+Estas son las direcciones actualizadas de su casillero <%= @cliente.codigo %>. Use la Línea 2 del servicio que quiere:
+
+<%= render "casillero_mailer/direcciones", direcciones: @direcciones %>
+También las encuentra en «Mis Direcciones», en su cuenta: <%= cuenta_direcciones_url %>
+
+Compras Express Cargo

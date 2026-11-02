@@ -64,7 +64,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear(@paquete.tracking)
 
     assert_selector "[data-medicion-target='trabajo']", text: "Juan", wait: 5
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /1 caja escaneada/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /1 paquete escaneado/i
     assert_selector "[data-medicion-target='mesa'] li", text: @paquete.numero_recepcion
     assert_equal "codigo_medicion", foco, "el foco se queda en la pistola: la mesa se arma escaneando"
 
@@ -96,21 +96,21 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     escanear_a_la_mesa(tercera, 3)
 
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /3 cajas escaneadas/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /3 paquetes escaneados/i
     assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
 
     teclear "40", "20", "30", "40"
     espiar_impresion
     send_keys :f9
 
-    assert_selector "[data-medicion-target='banner']", text: "3 cajas en un solo volumen", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "3 paquetes en un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "tres cajas, un solo bulto"
     assert_equal 3, Bulto.first.paquetes.count
     assert_equal 40.0, Bulto.first.peso.to_f
 
     visit lo_que_abrio
     assert_selector ".med", count: 1, visible: :all
-    assert_text "3 cajas"
+    assert_text "3 paquetes"
   end
 
   # C27-05 · Yusef: *"escanea uno de Jorge y va y escanea otro y ese no es el
@@ -213,7 +213,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     find("#codigo_medicion").send_keys(:f5)
 
-    assert_selector "dialog[open]", text: "No hay cajas escaneadas", wait: 5
+    assert_selector "dialog[open]", text: "No hay paquetes escaneados", wait: 5
   end
 
   # C27-04 · *"Ese está consolidando con tal pre-alerta, con tal número. Ese va
@@ -268,7 +268,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     espiar_impresion
     escanear(@paquete.tracking)
 
-    assert_selector "dialog[open]", text: "Esta caja ya está medida", wait: 5
+    assert_selector "dialog[open]", text: "Este paquete ya está medido", wait: 5
     within("dialog[open]") { click_on "Reimprimir sus etiquetas" }
 
     assert_no_selector "dialog[open]", wait: 5
@@ -292,7 +292,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     viejo = Bulto.last
 
     escanear(@paquete.tracking)
-    assert_selector "dialog[open]", text: "Esta caja ya está medida", wait: 5
+    assert_selector "dialog[open]", text: "Este paquete ya está medido", wait: 5
     within("dialog[open]") { click_on "Medir de nuevo" }
 
     assert_no_selector "dialog[open]", wait: 5
@@ -408,7 +408,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='listaVolumenes'] li", text: /Volumen 1/i
     assert_selector "[data-medicion-target='listaVolumenes'] li", text: "20 lb"
     assert_no_selector "[data-medicion-target='listaVolumenes'] li", text: "10 lb"
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /2 cajas escaneadas/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /2 paquetes escaneados/i
   end
 
   # C27-04 · La «Notificación» de la pizarra —*medir → notificación → buscar el
@@ -431,8 +431,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='tandaCajas'] button", visible: :all
 
     linea = find("[data-medicion-target='tandaConsolidado']")
-    assert_includes linea.text, "Consolidando #{pa.numero_documento}"
-    assert_includes linea.text, "escaneadas 1"
+    assert_includes linea.text, "Consolidado #{pa.numero_documento}"
+    assert_includes linea.text, "escaneados 1"
     assert_includes linea.text, "faltan 2"
     assert_not_includes linea.text, segunda.numero_recepcion, "los códigos van en los dibujitos, no en la frase"
 
@@ -442,7 +442,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     # C28-11 · El número grande: lo resuelto contra el total.
     assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    # C34-05 · Lo que falta, escrito y por dónde está.
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Falta 1 acá, sin medir · Falta 1 que no ha llegado a Miami"
     assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
 
     # C28-13 · La segunda **ya llegó** y no está en la tanda: guardar frena y
@@ -450,7 +451,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     teclear "20", "10", "12", "14"
     espiar_impresion
     send_keys :f9
-    assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
+    assert_selector "dialog[open]", text: /faltan paquetes que sí vinieron/i, wait: 5
     assert_selector "dialog[open] li", text: segunda.numero_recepcion
     assert_no_selector "dialog[open] li", text: "1ZFALTA000000002"  # la que no vino no frena
     within("dialog[open]") { click_on "Cancelar" }
@@ -480,7 +481,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     teclear "20", "10", "12", "14"
     espiar_impresion
     send_keys :f9
-    assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
+    assert_selector "dialog[open]", text: /faltan paquetes que sí vinieron/i, wait: 5
 
     within("dialog[open]") do
       select supervisor.nombre, from: "autorizar_supervisor", match: :first
@@ -504,6 +505,41 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_includes autorizacion.detalle, segunda.numero_recepcion
   end
 
+  # C34-05 · *"Como es el primero, le tiene que decir: este paquete es de un
+  # consolidado… ahí no lo vi"*. Con una pre-alerta de un solo paquete, el
+  # bloque no salía.
+  test "el consolidado se dice desde el primer paquete, aunque la pre-alerta tenga uno solo" do
+    pa = consolidado_con(@paquete)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "Consolidado #{pa.numero_documento} · 1 paquete", wait: 5
+    assert_selector "[data-medicion-target='tandaContador']", text: "1 de 1"
+  end
+
+  # C34-06 · Lo medido en una tanda anterior cuenta como resuelto y se ve
+  # aparte: *"cuatro escaneadas, una medida… no está jalando la que ya
+  # medimos, la primera"*.
+  test "lo medido en otra tanda cuenta en el número y se dice «medidos antes»" do
+    pa, otros = grupo_de_tres(@paquete)
+    segunda = llego(otros.first)
+    # Medida ayer en su propia tanda (lo que dejó «Medirlo solo»).
+    segunda.update_columns(medido_at: 1.day.ago, medido_por: "MD", medicion_sesion: SecureRandom.uuid)
+
+    visit medicion_index_path
+    escanear(@paquete.numero_recepcion)
+    # C29-18 · El consolidado ya tiene uno medido: el modal lo dice primero.
+    assert_selector "dialog[open]", text: "Traé el resto del estante", wait: 5
+    within("dialog[open]") { click_on "Medirlo solo" }
+    assert_selector "[data-medicion-target='mesa'] li", count: 1, wait: 5
+
+    assert_selector "[data-medicion-target='tandaContador']", exact_text: "2 de 3", wait: 5
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneados 1 · medidos antes 1 · faltan 1"
+    assert_selector "[data-medicion-target='tandaFaltan']", exact_text: "Falta 1 que no ha llegado a Miami"
+    assert pa
+  end
+
   # C28-11 · *"Completado… sí, el audio"*.
   test "con todas las cajas del consolidado escaneadas sale COMPLETADO" do
     pa = consolidado_con(@paquete)
@@ -512,7 +548,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 1", wait: 5
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Falta 1 acá, sin medir", wait: 5
     assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
 
     escanear_a_la_mesa(segunda, 2)
@@ -540,7 +576,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", wait: 5
-    assert_selector "[data-medicion-target='bannerFaltan']", text: "Faltan 2 cajas"
+    assert_selector "[data-medicion-target='bannerFaltan']", text: "Faltan 2 paquetes"
     assert_selector "[data-medicion-target='bannerFaltan']", text: "1ZFALTA000000001 (no ha llegado a Miami)"
     assert_equal 1, Bulto.count, "medir no se frenó por el grupo incompleto"
 
@@ -551,7 +587,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_text "acturar lo que hay"
     assert_selector "dialog[open]", text: "1ZFALTA000000001 · no ha llegado a Miami"
     page.driver.browser.action.send_keys(:escape).perform
-    assert_selector "dialog[open]", text: "Se va a seguir sin estas cajas"
+    assert_selector "dialog[open]", text: "Se va a seguir sin estos paquetes"
 
     click_on "Sí, medir lo que hay"
 
@@ -570,7 +606,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     escanear_a_la_mesa(consolidada, 2)
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneadas 2"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneados 2"
 
     teclear "20", "10", "12", "14"
     espiar_impresion
@@ -667,9 +703,9 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     escanear_a_la_mesa(tercera, 3)
 
-    assert_selector "[data-medicion-target='mesa'] li button[aria-label='Quitar esta caja de la tanda']", count: 3
+    assert_selector "[data-medicion-target='mesa'] li button[aria-label='Quitar este paquete de la tanda']", count: 3
     find("[data-medicion-target='mesa'] li", text: segunda.numero_recepcion)
-      .find("button[aria-label='Quitar esta caja de la tanda']").click
+      .find("button[aria-label='Quitar este paquete de la tanda']").click
 
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_no_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
@@ -678,14 +714,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     # Y la sacada vuelve a entrar con un pip, al final.
     escanear_a_la_mesa(segunda, 3)
     find("[data-medicion-target='mesa'] li", text: @paquete.numero_recepcion)
-      .find("button[aria-label='Quitar esta caja de la tanda']").click
+      .find("button[aria-label='Quitar este paquete de la tanda']").click
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
 
     teclear "30", "10", "12", "14"
     espiar_impresion
     send_keys :f9
 
-    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "2 paquetes en un solo volumen", wait: 5
     assert_equal [ segunda.id, tercera.id ].sort, Bulto.last.paquetes.map(&:id).sort
     assert_nil @paquete.reload.medido_at, "la que se sacó no se midió"
   end
@@ -704,7 +740,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     assert_selector "dialog[open]", text: "Notas del cliente", wait: 5
     assert_selector "dialog[open]", text: "Llamar antes de entregar: trabaja de noche"
-    assert_selector "dialog[open]", text: "Meter todo en una sola caja"
+    # C34-09 · La nota de grupo es para Miami: no sale acá.
+    assert_no_selector "dialog[open]", text: "Meter todo en una sola caja"
     page.driver.browser.action.send_keys(:escape).perform
     assert_selector "dialog[open]", text: "Notas del cliente"
     page.driver.browser.action.send_keys(:enter).perform
@@ -715,8 +752,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     assert_no_selector "dialog[open]"
 
-    click_on "2 notas del cliente"
-    assert_selector "dialog[open]", text: "Meter todo en una sola caja", wait: 5
+    click_on "1 nota del cliente"
+    assert_selector "dialog[open]", text: "Llamar antes de entregar: trabaja de noche", wait: 5
   end
 
   test "sin notas no hay modal ni botón" do
@@ -744,7 +781,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='tandaConsolidado']",
                     text: "#{clientes(:juan).nombre_completo} tiene 3 en el manifiesto #{manifiesto.numero}", wait: 5
     assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
-    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "Faltan 2 acá, sin medir"
     assert_selector "[data-medicion-target='tandaAusentes']", text: tercera.reload.numero_recepcion
     assert_selector "[data-medicion-target='tandaAusentes']", text: "acá, sin medir"
 
@@ -791,7 +828,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "dialog[open]", text: "¿Medís solo estos?", wait: 5
     within("dialog[open]") { click_on "Medir solo estos" }
 
-    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "2 paquetes en un solo volumen", wait: 5
     assert_equal 1, Bulto.count
     assert_equal [ @paquete.id, segunda.id ].sort, Bulto.first.paquetes.pluck(:id).sort
   end
@@ -810,7 +847,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     espiar_impresion
     send_keys :f9
 
-    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "2 paquetes en un solo volumen", wait: 5
     assert_no_selector "dialog[open]"
     assert_equal 1, Bulto.count
   end
@@ -827,10 +864,10 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(consolidada, 1)
     escanear(suelta.tracking)
 
-    assert_selector "dialog[open]", text: "¿La agregás a este consolidado?", wait: 5
+    assert_selector "dialog[open]", text: "¿Lo agregás a este consolidado?", wait: 5
     assert_selector "dialog[open]", text: pa.numero_documento
     assert_no_selector "dialog[open] button", text: "Hago el consolidado"
-    within("dialog[open]") { click_on "Agregarla a este consolidado" }
+    within("dialog[open]") { click_on "Agregarlo a este consolidado" }
 
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
@@ -847,8 +884,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(consolidada, 1)
     escanear(suelta.tracking)
-    assert_selector "dialog[open]", text: "¿La agregás a este consolidado?", wait: 5
-    within("dialog[open]") { click_on "Sigo sin ella, la dejo de lado" }
+    assert_selector "dialog[open]", text: "¿Lo agregás a este consolidado?", wait: 5
+    within("dialog[open]") { click_on "Sigo sin él, lo dejo de lado" }
 
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='mesa'] li", count: 1, text: consolidada.numero_recepcion
@@ -881,6 +918,11 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_selector "[data-medicion-target='mesa'] li", text: tarde.numero_recepcion
+    # C34-06 · El medido de antes vuelve a la mesa **una** vez: el contador
+    # decía «3 de 2» porque lo sumaba como escaneado y como medido. Y su
+    # renglón dice que ya estaba medido.
+    assert_selector "[data-medicion-target='tandaContador']", exact_text: "2 de 2"
+    assert_selector "[data-medicion-target='mesa'] li", text: /#{medida.numero_recepcion}.*MEDIDO ANTES/m
     # C30-11 · *"Desde el instante que le dio que lo va a medir de nuevo… se
     # le borre todo… que solo le diga volumen anterior"*. Antes el volumen
     # viejo volvía a la lista y había que quitarlo con la X —*"lo que hiciste
@@ -894,7 +936,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     espiar_impresion
     send_keys :f9
 
-    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "2 paquetes en un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "la tanda nueva reemplaza a la vieja"
     assert_nil Bulto.find_by(id: viejo.id), "el volumen viejo no sobrevive al lado del nuevo"
     assert_equal 9.0, Bulto.last.peso.to_f

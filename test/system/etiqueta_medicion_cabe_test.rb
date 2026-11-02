@@ -49,7 +49,7 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
 
     assert_cabe
     assert_text "999.50"
-    assert_text "100 cajas"
+    assert_text "100 paquetes"
     assert_text "10 de 10"
     assert_text "RMI0002026000901-12"
     assert_selector ".qr svg"

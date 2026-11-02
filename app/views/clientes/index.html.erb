@@ -3,6 +3,13 @@
     `[data-shortcut]` que encuentre. %>
 <%= render PageHeaderComponent.new(title: "Clientes", subtitle: "#{@clientes.total_count} clientes registrados") do |header|
   if can_edit_clientes?
+    # C33-05 · Las direcciones del casillero a alguien que todavía no es
+    # cliente (SAC).
+    header.with_action do
+      render ButtonComponent.new(variant: :secondary, href: informacion_casillero_clientes_path, icon: "envelope") do
+        "Información de casillero"
+      end
+    end
     header.with_action do
       render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F1") do
         "Nuevo Cliente"

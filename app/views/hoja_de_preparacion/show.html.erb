@@ -31,8 +31,10 @@
   <% end %>
 <% end %>
 
+<%# PR-P.12 · `auto-envio`: elegir el modo, un servicio o un manifiesto manda
+    la hoja sola. Antes la página no cambiaba hasta apretar un botón. %>
 <%= form_with url: hoja_de_preparacion_path, method: :patch, scope: :hoja, id: "hoja-de-preparacion",
-              class: "space-y-6" do |f| %>
+              class: "space-y-6", data: { controller: "auto-envio" } do |f| %>
 
   <%# ── 1 · Qué se trabaja ───────────────────────────────────────────────
       *"Seleccionar qué tipo de servicio vamos a trabajar"* — en selección
@@ -48,7 +50,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <label class="cursor-pointer">
-        <%= f.radio_button :modo, "nuevas", checked: @hoja.nuevas?, class: "peer sr-only" %>
+        <%= f.radio_button :modo, "nuevas", checked: @hoja.nuevas?, class: "peer sr-only",
+              data: { action: "change->auto-envio#enviar" } %>
         <span class="block h-full rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4
                      peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
                      peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep">
@@ -57,7 +60,8 @@
         </span>
       </label>
       <label class="cursor-pointer">
-        <%= f.radio_button :modo, "editar", checked: @hoja.editar?, class: "peer sr-only" %>
+        <%= f.radio_button :modo, "editar", checked: @hoja.editar?, class: "peer sr-only",
+              data: { action: "change->auto-envio#enviar" } %>
         <span class="block h-full rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4
                      peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
                      peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep">
@@ -67,8 +71,15 @@
       </label>
     </div>
 
+    <%# PR-P.12 · Los servicios son de «nuevas»: en «editar» no van. Se
+        mantienen como campos ocultos para que volver a «nuevas» no los pierda. %>
+    <% if @hoja.editar? %>
+      <% @hoja.tipo_envio_ids.each do |id| %>
+        <%= hidden_field_tag "hoja[tipo_envio_ids][]", id, id: nil %>
+      <% end %>
+    <% else %>
     <fieldset class="mt-5">
-      <legend class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Servicios (para pre-facturas nuevas)</legend>
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Servicios</legend>
       <%# El vacío va siempre: sin él, destildar todo no mandaría nada y la
           sesión se quedaría con los de antes. %>
       <%= hidden_field_tag "hoja[tipo_envio_ids][]", "", id: nil %>
@@ -77,16 +88,22 @@
           <label class="inline-flex items-center gap-2 min-h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer
                         has-[:checked]:border-cec-gold has-[:checked]:bg-cec-gold/10">
             <%= check_box_tag "hoja[tipo_envio_ids][]", tipo.id, @hoja.tipo_envio_ids.include?(tipo.id),
-                  id: "hoja_tipo_envio_#{tipo.id}", class: "rounded border-gray-300 text-cec-navy focus:ring-cec-teal" %>
+                  id: "hoja_tipo_envio_#{tipo.id}", class: "rounded border-gray-300 text-cec-navy focus:ring-cec-teal",
+                  data: { action: "change->auto-envio#enviar" } %>
             <span class="text-sm font-medium text-gray-800 dark:text-gray-100"><%= tipo.nombre %></span>
           </label>
         <% end %>
       </div>
     </fieldset>
 
-    <div class="mt-5 flex justify-end">
-      <%= render ButtonComponent.new(type: :submit, variant: :outline_navy, icon: "arrow-down") do %>Ver manifiestos<% end %>
-    </div>
+    <%# Tildar un servicio ya trae sus manifiestos (`auto-envio`); el botón
+        queda por si el navegador no corre JS. %>
+    <noscript>
+      <div class="mt-5 flex justify-end">
+        <%= render ButtonComponent.new(type: :submit, variant: :outline_navy, icon: "arrow-down") do %>Ver manifiestos<% end %>
+      </div>
+    </noscript>
+    <% end %>
   </section>
 
   <%# El bloque 2 vive en su partial. En «nuevas» va adentro del formulario
@@ -112,6 +129,15 @@
         A esta hora se le avisa al cliente que su paquete ya está disponible.
         Por defecto, las <%= HojaDePreparacion.hora_por_defecto %>.
       </p>
+      <%# PR-P.12 · La hora de hoy que ya pasó no es un error —«si la hora ya
+          pasó el aviso sale al apretar F9»—, pero hay que decirlo: a las 10:47
+          la hoja decía 07:30 y cada F9 avisaba en el acto, sin que nadie lo
+          supiera. %>
+      <% if @hoja.disponible_en <= Time.current %>
+        <p class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-300/60 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200" data-hora-pasada>
+          Esa hora ya pasó: cada F9 le avisa al cliente al instante.
+        </p>
+      <% end %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
         <div>
           <%= label_tag "hoja_fecha", "Fecha", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
@@ -151,8 +177,9 @@
       <% end %>
       <%= render ButtonComponent.new(type: :submit, variant: :primary, icon: "qr-code", shortcut: "F8",
             name: "empezar", value: "1") do %>Guardar y empezar a auditar<% end %>
-    <% else %>
-      <%= render ButtonComponent.new(type: :submit, variant: :primary, icon: "check", shortcut: "F8") do %>Guardar la hoja<% end %>
+    <%# PR-P.12 · En «editar» no hay nada que guardar: el modo se guarda al
+        elegirlo, y lo que se corrige son las tarjetas de abajo. «Guardar la
+        hoja» guardaba solo el modo, y F8 recargaba la página. %>
     <% end %>
   </div>
 <% end %>

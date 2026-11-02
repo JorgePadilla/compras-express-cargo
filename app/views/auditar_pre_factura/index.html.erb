@@ -28,6 +28,9 @@
      data-action="auditar-pre-factura:ok->audio#success
                   auditar-pre-factura:consolidando->audio#notify
                   auditar-pre-factura:medicionAnterior->audio#alert
+                  auditar-pre-factura:grupoIncompleto->audio#notify
+                  auditar-pre-factura:preguntaNotificar->audio#alert
+                  auditar-pre-factura:sucursalDistinta->audio#errorSucursal
                   auditar-pre-factura:pertenece->audio#success
                   auditar-pre-factura:completo->audio#completo
                   auditar-pre-factura:yaEscaneada->audio#notify
@@ -53,6 +56,10 @@
     <%= TipoEnvio.where(id: @hoja.tipo_envio_ids).order(:nombre).pluck(:nombre).join(", ") %> ·
     <%= Manifiesto.where(id: @hoja.manifiesto_ids).order(:numero).pluck(:numero).join(", ") %> ·
     aviso el <%= @hoja.disponible_en.strftime("%d/%m/%Y a las %H:%M") %>
+    <%# PR-P.12 · Si la hora ya pasó, F9 avisa al instante: que se sepa. %>
+    <% if @hoja.disponible_en <= Time.current %>
+      · <span class="font-semibold text-amber-800 dark:text-amber-300" data-hora-pasada>esa hora ya pasó: F9 avisa al instante</span>
+    <% end %>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -65,7 +72,7 @@
              data-action="keydown->auditar-pre-factura#teclado paste->auditar-pre-factura#pegado"
              class="block w-full min-h-12 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        Primero el QR de cualquier volumen: trae la tanda entera. Después la etiqueta de Miami de cada caja.
+        Primero el QR de cualquier volumen: trae la tanda entera. Después la etiqueta de Miami de cada paquete.
       </p>
       <div data-auditar-pre-factura-target="aviso" data-controller="anuncia-cambios" class="hidden mt-4 rounded-lg p-4 text-base"></div>
       <ol data-auditar-pre-factura-target="bitacora" class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-300"></ol>
@@ -80,6 +87,9 @@
               data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
         <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
               data: { auditar_pre_factura_target: "guardarBtn", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+        <%# C34 · Lista 10 · F10: lo mismo que F9, más la orden impresa. %>
+        <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F10", shortcut_label_only: true,
+              data: { action: "auditar-pre-factura#guardarConOrden" })) { "Imprimir orden y etiqueta" } %>
       </div>
     </section>
 
@@ -100,7 +110,7 @@
 
         <p class="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="resumen"></p>
 
-        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cajas</h3>
+        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Paquetes</h3>
         <ul class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2" data-auditar-pre-factura-target="cajas"></ul>
 
         <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Volúmenes</h3>
@@ -135,7 +145,7 @@
           style="margin: auto"
           class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
           aria-labelledby="auditar-pre-factura-dialogo-1-titulo">
-    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-1-titulo", tono: :listo, tamano: :grande, kicker: "Están todas las cajas",
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-1-titulo", tono: :listo, tamano: :grande, kicker: "Están todos los paquetes",
           titulo: "¿Desea agregar algo más a esta pre-factura?") %>
     <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
       <p data-auditar-pre-factura-target="finTexto"></p>
@@ -151,6 +161,8 @@
             data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { auditar_pre_factura_target: "finGuardar", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+      <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F10", shortcut_label_only: true,
+            data: { action: "auditar-pre-factura#guardarConOrden" })) { "Imprimir orden y etiqueta" } %>
     </div>
   </dialog>
 
@@ -179,12 +191,61 @@
              aria-label="Cantidad de etiquetas"
              class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-cec-navy dark:text-cec-gold shadow-sm focus:ring-cec-teal focus:border-cec-teal">
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Una por bolsa, «1 de N». Viene puesto el número de volúmenes.</p>
+      <%# C34-08 · Adónde va, también al imprimir. %>
+      <p hidden class="mt-3 rounded-lg bg-red-700 px-3 py-2 text-base font-bold text-white" data-auditar-pre-factura-target="etiquetasDestino"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
       <%= render ButtonComponent.new(variant: :secondary, size: :lg,
             data: { action: "auditar-pre-factura#cerrarEtiquetas" }) do %>Cancelar<% end %>
       <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "printer",
             data: { action: "auditar-pre-factura#confirmarEtiquetas" }) do %>Imprimir<% end %>
+    </div>
+  </dialog>
+
+  <%# ── C34-08 · Lista 9 · «Va para Tegucigalpa» ──
+      El equipo, en la pasada: *"un modal que le diga para dónde va… cuando
+      escanean el QR de peso"*. Es el aviso de sucursal de Miami (C29-07),
+      con su sonido, acá sin bloquear: la pre-factura se hace igual, y la
+      etiqueta dice VA PARA. %>
+  <dialog data-auditar-pre-factura-target="sucursalModal"
+          data-action="cancel->auditar-pre-factura#sucursalEntendido"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="auditar-pre-factura-dialogo-4-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-4-titulo", tono: :bloqueo, tamano: :grande, centrado: true,
+          kicker: "Otra sucursal", titulo: "Este cliente no retira en San Pedro") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5">
+      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="sucursalTexto"></p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">La etiqueta de entrega lo dice en negro: VA PARA.</p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render ButtonComponent.new(variant: :primary, size: :lg,
+            data: { auditar_pre_factura_target: "sucursalEntendido", action: "auditar-pre-factura#sucursalEntendido" }) do %>Entendido<% end %>
+    </div>
+  </dialog>
+
+  <%# ── C34-07 · Lista 14 · «¿Está seguro que desea notificarlo?» ──
+      F9 con un consolidado (o un split) al que le falta carga. Yusef, en la
+      lista del personal: *"tiene sentido… está muy bueno"*; F8 guarda
+      consolidando, F9 es que ya terminó, y si queda uno en tránsito se
+      pregunta. Antes era un bloqueo. El foco va al «Sí»: el que apretó F9
+      ya dijo que quería avisar, y F9 otra vez también confirma. %>
+  <dialog data-auditar-pre-factura-target="preguntaModal"
+          data-action="cancel->auditar-pre-factura#preguntaNo"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="auditar-pre-factura-dialogo-3-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-3-titulo", tono: :atencion, tamano: :grande,
+          kicker: "Falta carga del consolidado", titulo: "¿Está seguro que desea notificarlo?") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
+      <p data-auditar-pre-factura-target="preguntaTexto"></p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Si todavía se espera, cancelá y guardá con F8: queda consolidando, sin avisar.</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render ButtonComponent.new(variant: :secondary, size: :lg,
+            data: { action: "auditar-pre-factura#preguntaNo" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "printer",
+            data: { auditar_pre_factura_target: "preguntaSi", action: "auditar-pre-factura#preguntaSi" }) do %>Sí, notificar<% end %>
     </div>
   </dialog>
 </div>

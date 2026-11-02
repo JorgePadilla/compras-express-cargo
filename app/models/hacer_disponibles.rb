@@ -83,6 +83,18 @@ class HacerDisponibles
     pre_factura.paquetes.reload.where(estado: ESTADOS_QUE_ESPERAN).find_each do |caja|
       caja.update!(estado: "disponible_entrega")
     end
+
+    # C34-08 · C33-04 · De otra sucursal: pasa a disponible —el interno solo
+    # se lleva lo disponible— pero **no se le avisa**. Le avisa la recepción
+    # en destino (`NotificarLlegadaASucursal`), a la hora que pone quien
+    # recibe. Tampoco se sella `llegada_notificada_at`: hasta acá F9 lo
+    # sellaba, y por eso la recepción en Tegucigalpa no avisaba nunca (el
+    # «avisa otra vez» de C33-04 no pasaba).
+    if pre_factura.espera_sucursal?
+      pre_factura.update_columns(espera_llegada_at: @ahora)
+      return
+    end
+
     Paquete.where(id: cajas.map(&:id), llegada_notificada_at: nil).update_all(llegada_notificada_at: @ahora)
 
     # `C30-16` · El aviso es obligatorio: no depende de `notificar_facturas`,

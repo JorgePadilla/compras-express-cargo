@@ -56,7 +56,7 @@ class PanelContextoController < ApplicationController
       scope.sin_vincular
     end
 
-    scope.limit(5).pluck(:tracking, :instrucciones)
+    scope.limit(5).pluck(:tracking, :instrucciones).map { |t, i| [ t, i, "Instrucción para Miami" ] }
   end
 
   # La nota que aplica a todo el envío. Se acota a las pre-alertas del renglón
@@ -72,6 +72,6 @@ class PanelContextoController < ApplicationController
       scope.where(estado: "pre_alerta")
     end
 
-    scope.distinct.limit(5).pluck(:numero_documento, :notas_grupo)
+    scope.distinct.limit(5).pluck(:numero_documento, :notas_grupo).map { |n, g| [ n, g, "Nota del grupo" ] }
   end
 end

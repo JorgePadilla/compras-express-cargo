@@ -140,6 +140,7 @@ module AuditLogHelper
     "notas_sac"            => "Notas SAC",
     "notas_miami"          => "Notas Miami",
     "notas_honduras"       => "Notas Honduras",
+    "notas_medicion"       => "Notas Medición",
 
     # Fechas (PR-D1)
     "fecha_recibido_miami"        => "Fecha recibido Miami",

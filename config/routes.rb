@@ -47,6 +47,13 @@ Rails.application.routes.draw do
 
   resources :clientes, except: [ :destroy ] do
     collection { get :buscar }
+    # C33-05 · Los correos del casillero: la información actualizada desde la
+    # ficha, y la información general a alguien que todavía no es cliente.
+    member { post :enviar_casillero }
+    collection do
+      get :informacion_casillero, path: "informacion-de-casillero"
+      post :informacion_casillero, action: :enviar_informacion_casillero, path: "informacion-de-casillero"
+    end
     # PR-C7.37: ponerle o cambiarle la clave del portal desde la ficha. Yusef:
     # *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
     # olvidó"*. Va como acción propia y NO como un campo más de `cliente_params`
@@ -257,6 +264,8 @@ Rails.application.routes.draw do
     member do
       post :escanear
       patch :finalizar
+      # C34-08 · La hora del aviso a los clientes, en el interno.
+      patch :hora_aviso
       # C30-09 · La hoja del manifiesto, desde la lista: *"lo voy a querer
       # imprimir para darle al oficio"*.
       get :documento
@@ -489,6 +498,8 @@ Rails.application.routes.draw do
     end
     resources :financiamientos, only: %i[index show]
     resources :entregas, only: %i[index show]
+    # C33-05 · El casillero en Miami, uno por servicio.
+    resource :direcciones, only: :show
   end
 
   root "dashboard#index"

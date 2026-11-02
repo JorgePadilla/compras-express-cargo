@@ -57,7 +57,7 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_equal "ok", data["resultado"]
     assert_equal @bulto.sesion, data["sesion"]
     assert_equal({ "codigo" => @cliente.codigo, "nombre" => @cliente.nombre_completo }, data["cliente"])
-    assert_equal "1 volumen · 2 cajas", data["resumen"]
+    assert_equal "1 volumen · 2 paquetes", data["resumen"]
     assert_nil data["aviso_ndem"], "la etiqueta está al día"
     assert_equal 1, data["volumenes"].size
     assert_equal 4.0, data["volumenes"].first["peso"]
@@ -123,6 +123,52 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ 14, 30 ], [ pf.notificar_at.hour, pf.notificar_at.min ]
     assert data["imprimir_url"].present?
     assert_match(/El aviso sale el/, data["mensaje"])
+  end
+
+  # C34-07 · Lista 14 · El consolidado al que le falta carga: el volumen entra
+  # con `grupo_aviso`, F9 contesta 422 con la pregunta, y con `confirmado` guarda.
+  test "F9 con el consolidado incompleto pregunta, y con confirmado guarda" do
+    pa = PreAlerta.create!(numero_documento: "PA-CTL#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: @cer, consolidado: true, con_reempaque: true, estado: "pre_alerta",
+                           titulo: "Consolidado", creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    %w[1ZCTLCONS000001 1ZCTLCONS000002].each { |t| pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Bulto", fecha: Date.current) }
+    una = pa.pre_alerta_paquetes.order(:id).first.paquete
+    una.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
+    una.reload.update!(estado: "en_aduana", manifiesto: @manifiesto, peso: 2)
+    bulto, = MedirBulto.new(user: @user).guardar!(paquete_ids: [ una.id ], volumenes: [ { peso: "2" } ])
+    con_hoja(fecha: 1.day.from_now.to_date.iso8601)
+
+    post escanear_volumen_auditar_pre_factura_index_url, params: { codigo: "MED #{una.reload.tracking} 2.00" }, as: :json
+    assert_equal "ok", response.parsed_body["resultado"]
+    assert_match(/no está completo: falta 1 que no ha llegado a Miami/, response.parsed_body["grupo_aviso"])
+
+    post guardar_auditar_pre_factura_index_url, params: { sesiones: [ bulto.sesion ], escaneadas: [ una.id ] }, as: :json
+    assert_response :unprocessable_entity
+    assert response.parsed_body["necesita_confirmacion"]
+
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ bulto.sesion ], escaneadas: [ una.id ], confirmado: true }, as: :json
+    assert response.parsed_body["ok"], response.parsed_body["mensaje"]
+  end
+
+  # C34 · Lista 10 · F10: la etiqueta, y en la misma pestaña la orden.
+  test "F10 guarda como F9 y la etiqueta encadena la orden impresa" do
+    con_hoja(hora: "14:30", fecha: 1.day.from_now.to_date.iso8601)
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), orden: true }, as: :json
+
+    data = response.parsed_body
+    assert data["ok"], data["mensaje"]
+    assert_includes data["imprimir_url"], "orden=1"
+    pf = PreFactura.find_by!(numero: data["numero"])
+    assert pf.notificar_at.present?, "F10 avisa como F9"
+
+    get data["imprimir_url"]
+    assert_includes response.body, pre_factura_path(pf, print: "true").to_json[1..-2]
+
+    get pre_factura_path(pf, print: "true")
+    assert_includes response.body, "window.print()"
+    assert_includes response.body, "Auditada por"
   end
 
   # C31-17 · Lo que contestó «¿Cuántas etiquetas?» queda en la pre-factura, y
@@ -196,7 +242,7 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
            params: { sesiones: [ @bulto.sesion ], escaneadas: [ @cajas.first.id ] }, as: :json
     end
     assert_response :unprocessable_entity
-    assert_match(/Faltan 1 caja/, response.parsed_body["mensaje"])
+    assert_match(/Faltan 1 paquete/, response.parsed_body["mensaje"])
   end
 
   # PR-P.8 · La red de abajo: si un índice único salta igual, la pantalla

@@ -1,0 +1,14 @@
+Hola <%= @cliente.nombre_completo %>,
+
+<%= @paquetes.size == 1 ? "Tu paquete salió hoy" : "Tus #{@paquetes.size} paquetes salieron hoy" %> de Miami hacia Honduras.
+<% @por_tipo.each do |tipo, paquetes| %>
+
+<%= tipo %>
+<% paquetes.each do |paquete| %>
+- <%= paquete.tracking %> — <%= paquete.descripcion %><% if paquete.fecha_posible_entrega %> · entrega probable: <%= FechaDeEntrega.texto(paquete.fecha_posible_entrega) %><% end %>
+<% end %>
+<% end %>
+
+Te avisaremos cuando esté disponible para retirar.
+
+Compras Express Cargo

@@ -79,7 +79,7 @@ class PreFactura < ApplicationRecord
   # PR-P.2 · Las que ya llegaron a su hora y todavía no avisaron. Va por el
   # índice parcial `index_pre_facturas_por_avisar`.
   scope :por_avisar, ->(ahora = Time.current) {
-    activas.where(notificado_at: nil).where.not(notificar_at: nil).where(notificar_at: ..ahora)
+    activas.where(notificado_at: nil, espera_llegada_at: nil).where.not(notificar_at: nil).where(notificar_at: ..ahora)
   }
   scope :pendientes, -> { where(estado: "pendiente") }
   scope :recientes,  -> { order(created_at: :desc) }
@@ -499,11 +499,34 @@ class PreFactura < ApplicationRecord
   # En qué anda el aviso, para la hoja en modo «editar».
   def estado_del_aviso
     return :avisada if notificado_at.present?
+    return :espera_sucursal if espera_llegada_at.present?
     return :consolidando if consolidando_at.present?
     return :error if notificacion_error.present?
     return :programada if notificar_at.present?
 
     :sin_aviso
+  end
+
+  # C34-08 · C33-04 · **La carga todavía no está donde retira el cliente.**
+  # Yusef: *"no va a notificar si es de una sucursal y no ha llegado a la
+  # sucursal… Alexis escanea esta hoja y eso lo activa"*. Se compara la
+  # sucursal de retiro de cada caja (la del paquete, si no la del cliente, si
+  # no San Pedro) con dónde está (`sucursal_actual`, que escribe la recepción;
+  # sin dato, San Pedro). No contra «San Pedro» a secas: un oficial que aterriza
+  # directo en Tegucigalpa ya está donde retira, y esperaría un interno que
+  # nunca va a llegar.
+  def espera_sucursal?
+    defecto = Sucursal.para_cliente_nuevo
+    paquetes.includes(:sucursal, :sucursal_actual, cliente: :sucursal_retiro).any? do |caja|
+      retira = caja.sucursal || caja.cliente&.sucursal_retiro || defecto
+      esta = caja.sucursal_actual || defecto
+      retira.present? && retira != esta
+    end
+  end
+
+  # Adónde va, para decirlo: la de retiro de la primera caja que espera.
+  def sucursal_que_espera
+    EtiquetaDeEntrega.new(self).sucursal
   end
 
   # PR-P.9 · Confirmar y Facturar, a mano, sobre una que salió de la auditoría.

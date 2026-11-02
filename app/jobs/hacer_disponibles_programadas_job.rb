@@ -9,5 +9,7 @@ class HacerDisponiblesProgramadasJob < ApplicationJob
 
   def perform
     HacerDisponibles.call
+    # C34-08 · Y los internos recibidos cuya hora de aviso ya llegó.
+    NotificarLlegadaASucursal.barrer
   end
 end

@@ -157,4 +157,46 @@ class HistorialManifiestosTest < ActionDispatch::IntegrationTest
       assert_select "td", text: pre_facturas(:borrador_juan).created_at.strftime("%d/%m/%Y")
     end
   end
+
+  # ── Después de buscar ───────────────────────────────────────────────────
+  # Jorge, 2026-10-24: *"ocultar o minimizar los filtros una vez que
+  # presionamos buscar y mover el focus a los resultados"*.
+
+  test "al entrar los filtros están abiertos y el foco no se mueve" do
+    ingresar(users(:digitador))
+    get historial_manifiestos_path
+
+    assert_select "details[data-filtros='historial'][open]"
+    assert_select "form input[type=hidden][name='buscado'][value='1']"
+    assert_select "h2#resultados[tabindex='-1']:not([data-controller])"
+  end
+
+  test "después de buscar se pliegan, dicen qué quedó aplicado, y el foco va a los resultados" do
+    ingresar(users(:digitador))
+    get historial_manifiestos_path(buscado: "1", estados: %w[enviado recibido], tipo: "oficial",
+                                   empresa_manifiesto_id: empresa_manifiestos(:pronto).id,
+                                   tipo_envio_ids: [ tipo_envios(:cem).id ], incluir_3_12_meses: "1")
+
+    assert_select "details[data-filtros='historial']:not([open])"
+    assert_select "details[data-filtros='historial'] summary [data-resumen-de-filtros]",
+                  text: "Enviado, Recibido · #{empresa_manifiestos(:pronto).nombre} · Oficial · #{tipo_envios(:cem).nombre} · Último año"
+    assert_select "h2#resultados[data-controller='enfocar-al-entrar']", text: /Resultados · 1 manifiesto\b/
+  end
+
+  test "el resumen dice el período, y si no hay nada, «ningún manifiesto»" do
+    ingresar(users(:digitador))
+    get historial_manifiestos_path(buscado: "1", desde: "2026-08-12", hasta: "2026-09-30")
+
+    assert_select "[data-resumen-de-filtros]", text: "Todos los estados · 12/08/2026 – 30/09/2026"
+    assert_select "h2#resultados", text: /Resultados · ningún manifiesto/
+  end
+
+  # Lo que el usuario escribe en el buscador vuelve en la barra: escapado (#573).
+  test "la búsqueda sale en el resumen, escapada" do
+    ingresar(users(:digitador))
+    get historial_manifiestos_path(buscado: "1", q: "<b>CER</b>")
+
+    assert_select "[data-resumen-de-filtros]", text: "«<b>CER</b>» · Todos los estados · Últimos 3 meses"
+    assert_not_includes response.body, "«<b>CER</b>»"
+  end
 end

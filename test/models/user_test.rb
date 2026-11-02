@@ -97,6 +97,6 @@ class UserTest < ActiveSupport::TestCase
   test "notas_permanentes_visibles para admin incluye todas las áreas" do
     admin = User.new(rol: "admin")
     campos = admin.notas_permanentes_visibles.map { |n| n[:campo] }
-    assert_equal %i[notas_miami notas_honduras notas_caja notas_sac].sort, campos.sort
+    assert_equal %i[notas_miami notas_honduras notas_medicion notas_caja notas_sac].sort, campos.sort
   end
 end

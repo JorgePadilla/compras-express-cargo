@@ -30,10 +30,11 @@ class LaColaDeVerdadTest < ActiveSupport::TestCase
   test "los jobs de recurring.yml existen y se pueden instanciar" do
     # Dormidos desde que se escribieron. Con la cola conectada, corren: el que
     # borra pre-alertas vacías a las 3am, cotizaciones expiradas, cuotas
-    # vencidas, y desde PR-P.2 el disponible programado, cada minuto.
+    # vencidas, desde PR-P.2 el disponible programado, cada minuto, y desde
+    # C33-03 el resumen de las 6 de la tarde.
     tareas = YAML.load_file(Rails.root.join("config/recurring.yml"), aliases: true)["production"]
 
-    assert_equal 4, tareas.size
+    assert_equal 5, tareas.size
     tareas.each_value { |t| assert Object.const_defined?(t["class"]), "#{t["class"]} no existe" }
   end
 

@@ -37,7 +37,9 @@ export default class extends Controller {
     "vacio", "contenido", "clienteCodigo", "clienteNombre", "servicio", "resumen",
     "cajas", "volumenes", "lineas",
     "finModal", "finTexto", "finGuardar", "finSeguir", "abierta",
-    "etiquetasModal", "etiquetasInput"
+    "etiquetasModal", "etiquetasInput",
+    "preguntaModal", "preguntaTexto", "preguntaSi",
+    "sucursalModal", "sucursalTexto", "sucursalEntendido", "etiquetasDestino"
   ]
   static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String, abrir: Object }
 
@@ -102,10 +104,21 @@ export default class extends Controller {
   }
 
   teclaGlobal(e) {
+    // C34-07 · Con «¿Está seguro que desea notificarlo?» abierto, F9 dice que
+    // sí —es la misma tecla que lo trajo— y ninguna otra hace nada.
+    if (this.preguntaModalTarget.open) {
+      if (e.key === "F9") {
+        e.preventDefault()
+        this.preguntaSi()
+      } else if (e.key === "F2" || e.key === "F8") {
+        e.preventDefault()
+      }
+      return
+    }
     // C31-17 · Con «¿Cuántas etiquetas?» abierto, un F9 o F8 más imprime con
     // el número que está —el que pide el modal— y F2 no limpia nada.
     if (this.etiquetasModalTarget.open) {
-      if (e.key === "F9" || e.key === "F8") {
+      if (e.key === "F9" || e.key === "F8" || e.key === "F10") {
         e.preventDefault()
         this.confirmarEtiquetas()
       } else if (e.key === "F2") {
@@ -116,6 +129,9 @@ export default class extends Controller {
     if (e.key === "F9") {
       e.preventDefault()
       this.guardar()
+    } else if (e.key === "F10") {
+      e.preventDefault()
+      this.guardarConOrden()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.consolidar()
@@ -140,14 +156,23 @@ export default class extends Controller {
           this._agregarTanda(data)
           this._anotar(`Volumen · ${data.resumen}`)
           // La etiqueta es de una medición anterior: se avisa con otro sonido,
-          // y la tanda de hoy queda cargada igual.
+          // y la tanda de hoy queda cargada igual. C34-07 · Al grupo que le
+          // falta carga también se lo dice, con su sonido: no traba.
+          // Lista 8 · El trato de precio del cliente va en la misma franja.
+          const avisos = [ data.aviso_ndem, data.grupo_aviso, data.cliente_aviso ].filter(Boolean)
           if (data.aviso_ndem) {
             this.dispatch("medicionAnterior")
-            this._avisar("alerta", data.aviso_ndem)
+          } else if (data.grupo_aviso || data.cliente_aviso) {
+            this.dispatch("grupoIncompleto")
           } else {
             this.dispatch("ok")
-            this._avisar("ok", data.mensaje)
           }
+          if (avisos.length) this._avisar("alerta", avisos.join(" · "))
+          else this._avisar("ok", data.mensaje)
+          // C34-08 · Lista 9 · Adónde va, en un modal rojo que no se pasa por
+          // alto: la nota «dejar en San Pedro» nadie la leyó.
+          this._destino = data.sucursal_aviso || null
+          if (data.sucursal_aviso) this._avisarSucursal(data.sucursal_aviso)
         } else {
           this.dispatch("rechazo")
           this._avisar("error", data.mensaje, data.pre_factura_url)
@@ -223,7 +248,7 @@ export default class extends Controller {
     const n = this.cajas.length
     this.finTextoTarget.textContent =
       `${this.cliente?.codigo || ""} · ${this.volumenes.length} volumen${this.volumenes.length === 1 ? "" : "es"} · ` +
-      `${n} caja${n === 1 ? "" : "s"}, todas escaneadas.`
+      `${n} paquete${n === 1 ? "" : "s"}, ${n === 1 ? "escaneado" : "todos escaneados"}.`
     this.finModalTarget.showModal()
     // El foco a «Agregar otro volumen», no a «Guardar»: un Enter de la pistola
     // con el modal abierto cierra y sigue, nunca guarda. Guardar es F9.
@@ -243,18 +268,31 @@ export default class extends Controller {
     this.guardar("consolidar")
   }
 
+  // C34 · Lista 10 · F10: lo de F9, y después de la etiqueta la orden —*"para
+  // Tegucigalpa, una sola tecla que imprima la orden y la etiqueta"*—.
+  guardarConOrden() {
+    this._pideOrden = true
+    this.guardar("avisar")
+  }
+
   // C31-17 · F9 y F8 ya no guardan de una: primero «¿Cuántas etiquetas?».
   guardar(modo = "avisar") {
     if (typeof modo !== "string") modo = "avisar"   // desde un clic llega el evento
     if (this._guardando) return
     if (this.finModalTarget.open) this.finModalTarget.close()
 
+    // Cada F9/F8 arranca sin la orden; solo F10 la pide (`guardarConOrden`).
+    this._conOrden = this._pideOrden === true
+    this._pideOrden = false
     // Sin nada escaneado no hay etiquetas que contar: sigue de una y el
     // servidor dice qué falta, como siempre.
     if (this.sesiones.length === 0) return this._guardar(modo, null)
 
     this._modoPendiente = modo
     this.etiquetasInputTarget.value = String(Math.max(this.volumenes.length, 1))
+    // C34-08 · *"Y al final, cuando impriman la etiqueta también"*.
+    this.etiquetasDestinoTarget.textContent = this._destino || ""
+    this.etiquetasDestinoTarget.hidden = !this._destino
     // Ningún modal de una pantalla de pistola abre mudo (A1-10).
     this.dispatch("cuantasEtiquetas")
     this.etiquetasModalTarget.showModal()
@@ -291,10 +329,11 @@ export default class extends Controller {
     if (e?.type === "cancel") e.preventDefault()
     this.etiquetasModalTarget.close()
     this._modoPendiente = null
+    this._conOrden = false
     enfocar(this.codigoTarget)
   }
 
-  _guardar(modo, etiquetas) {
+  _guardar(modo, etiquetas, confirmado = false) {
     if (this._guardando) return
 
     // La pestaña de la etiqueta se abre **acá**, en el gesto (la tecla o el
@@ -310,16 +349,24 @@ export default class extends Controller {
     // pistola lea mientras se guarda espera a que la pantalla quede limpia —si
     // no, una lectura en vuelo se mezclaría con la pre-factura que se cierra.
     this._cola = this._cola.then(() => this._post(this.guardarUrlValue, {
-      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas
+      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas,
+      confirmado, orden: this._conOrden === true
     })
       .then((data) => {
         if (data.ok) {
+          this._conOrden = false
           this.dispatch("guardado")
           if (ventana) ventana.location = data.imprimir_url
           this._reiniciar()
           this._pintar()
           this._avisar("ok", data.mensaje, data.pre_factura_url)
           this._anotar(`Guardada ${data.numero}`)
+        } else if (data.necesita_confirmacion) {
+          // C34-07 · Lista 14 · Falta carga del grupo: no es un error, es una
+          // pregunta. La pestaña se cierra; el «Sí» es un gesto nuevo y abre
+          // la suya.
+          ventana?.close()
+          this._preguntar(modo, etiquetas, data.mensaje)
         } else {
           ventana?.close()
           this.dispatch("noGuardo")
@@ -337,6 +384,48 @@ export default class extends Controller {
       }))
   }
 
+  // ── C34-08 · Lista 9 · «Va para Tegucigalpa» ────────────────────────────
+
+  _avisarSucursal(texto) {
+    this.sucursalTextoTarget.textContent = texto
+    this.dispatch("sucursalDistinta")
+    this.sucursalModalTarget.showModal()
+    requestAnimationFrame(() => this.sucursalEntendidoTarget.focus())
+  }
+
+  // «Entendido», Enter o Escape: la pistola sigue.
+  sucursalEntendido(e) {
+    if (e?.type === "cancel") e.preventDefault()
+    this.sucursalModalTarget.close()
+    enfocar(this.codigoTarget)
+  }
+
+  // ── C34-07 · «¿Está seguro que desea notificarlo?» ───────────────────────
+
+  _preguntar(modo, etiquetas, mensaje) {
+    this._pregunta = { modo, etiquetas }
+    this.preguntaTextoTarget.textContent = mensaje
+    this.dispatch("preguntaNotificar")
+    this.preguntaModalTarget.showModal()
+    requestAnimationFrame(() => this.preguntaSiTarget.focus())
+  }
+
+  // Sí: el mismo F9, con la respuesta. Todavía adentro del gesto.
+  preguntaSi() {
+    const p = this._pregunta
+    this.preguntaModalTarget.close()
+    this._pregunta = null
+    if (p) this._guardar(p.modo, p.etiquetas, true)
+  }
+
+  // No (o Escape): no se guarda nada; la tanda sigue en pantalla.
+  preguntaNo(e) {
+    if (e?.type === "cancel") e.preventDefault()
+    this.preguntaModalTarget.close()
+    this._pregunta = null
+    enfocar(this.codigoTarget)
+  }
+
   limpiar() {
     if (this.etiquetasModalTarget.open) this.etiquetasModalTarget.close()
     this._reiniciar()
@@ -349,6 +438,7 @@ export default class extends Controller {
   // ── Pintar ──────────────────────────────────────────────────────────────
 
   _reiniciar() {
+    this._destino = null
     this.sesiones = []
     this.cajas = []
     this.escaneadas = new Set()
@@ -379,7 +469,7 @@ export default class extends Controller {
     const n = this.cajas.length
     const v = this.volumenes.length
     this.resumenTarget.textContent =
-      `${v} volumen${v === 1 ? "" : "es"} · ${n} caja${n === 1 ? "" : "s"} · faltan ${this._faltan()}`
+      `${v} volumen${v === 1 ? "" : "es"} · ${n} paquete${n === 1 ? "" : "s"} · faltan ${this._faltan()}`
 
     this.cajasTarget.replaceChildren(...this.cajas.map((c) => {
       const li = document.createElement("li")

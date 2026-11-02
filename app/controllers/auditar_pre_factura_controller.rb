@@ -40,9 +40,11 @@ class AuditarPreFacturaController < ApplicationController
     pre_factura = guardador(params[:modo]).call
     render json: {
       ok: true, numero: pre_factura.numero, pre_factura_url: pre_factura_path(pre_factura),
-      imprimir_url: imprimir_url(pre_factura),
+      imprimir_url: imprimir_url(pre_factura, orden: params[:orden].to_s == "true"),
       mensaje: "Pre-factura #{pre_factura.numero} guardada. " + cuando_avisa(pre_factura)
     }
+  rescue GuardarPreFacturaAuditada::NecesitaConfirmacion => e
+    render json: { ok: false, necesita_confirmacion: true, mensaje: e.message }, status: :unprocessable_entity
   rescue GuardarPreFacturaAuditada::NoSePuede => e
     render json: { ok: false, mensaje: e.message }, status: :unprocessable_entity
   # PR-P.8 · La red de abajo. Dos F9 a la vez ya no llegan acá —el candado de
@@ -103,7 +105,8 @@ class AuditarPreFacturaController < ApplicationController
   def guardador(modo, con: sesiones)
     GuardarPreFacturaAuditada.new(hoja: @hoja, sesiones: con, escaneadas: Array(params[:escaneadas]),
                                   user: Current.user, modo: modo.presence || :avisar,
-                                  pre_factura_id: abierta&.id, etiquetas: params[:etiquetas].presence)
+                                  pre_factura_id: abierta&.id, etiquetas: params[:etiquetas].presence,
+                                  confirmado: params[:confirmado])
   end
 
   def cuando_avisa(pre_factura)
@@ -144,7 +147,9 @@ class AuditarPreFacturaController < ApplicationController
   # guardar nada—.
   def tanda_json(resultado)
     datos_de_tanda(resultado.sesion, resultado.bultos, resultado.cajas)
-      .merge(aviso_ndem: resultado.aviso, lineas: vista_previa(sesiones + [ resultado.sesion ]))
+      .merge(aviso_ndem: resultado.aviso, grupo_aviso: resultado.grupo_aviso,
+             sucursal_aviso: resultado.sucursal_aviso, cliente_aviso: resultado.cliente_aviso,
+             lineas: vista_previa(sesiones + [ resultado.sesion ]))
   end
 
   def datos_de_tanda(sesion, bultos, cajas)
@@ -164,7 +169,7 @@ class AuditarPreFacturaController < ApplicationController
   # otros dos"*), y la pantalla dice cuántos trae.
   def resumen(bultos, cajas)
     vol = bultos.size == 1 ? "1 volumen" : "#{bultos.size} volúmenes"
-    "#{vol} · #{cajas.size} caja#{"s" if cajas.size != 1}"
+    "#{vol} · #{cajas.size} paquete#{"s" if cajas.size != 1}"
   end
 
   def volumen_json(bulto)
@@ -195,7 +200,9 @@ class AuditarPreFacturaController < ApplicationController
 
   # PR-P.3 · La etiqueta de entrega 4×6 —con la franja CONSOLIDANDO si F8 la
   # dejó así—. Imprime y se cierra sola (`?print=true`).
-  def imprimir_url(pre_factura)
-    etiqueta_entrega_pre_factura_path(pre_factura, print: true)
+  # C34 · Lista 10 · F10: después de la etiqueta, la orden, en la misma
+  # pestaña (un gesto alcanza para un popup, no para dos).
+  def imprimir_url(pre_factura, orden: false)
+    etiqueta_entrega_pre_factura_path(pre_factura, print: true, **(orden ? { orden: 1 } : {}))
   end
 end

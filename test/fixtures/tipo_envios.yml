@@ -1,6 +1,7 @@
 express:
   nombre: EXPRESS
   codigo: express
+  linea_2_casillero: EXPRESS
   activo: true
   con_reempaque: true
   consolidable: true
@@ -12,6 +13,7 @@ express:
 cer:
   nombre: CER
   codigo: cer
+  linea_2_casillero: REEMPAQUE AEREO
   activo: true
   con_reempaque: true
   consolidable: true
@@ -23,6 +25,7 @@ cer:
 cem:
   nombre: CEM
   codigo: cem
+  linea_2_casillero: REEMPAQUE MARITIMO
   activo: true
   con_reempaque: true
   consolidable: true
@@ -34,6 +37,7 @@ cem:
 cka:
   nombre: CKA
   codigo: cka
+  linea_2_casillero: AEREO CKA
   activo: true
   con_reempaque: false
   consolidable: false
@@ -46,6 +50,7 @@ cka:
 ckm:
   nombre: CKM
   codigo: ckm
+  linea_2_casillero: MARITIMO CKM
   activo: true
   con_reempaque: false
   consolidable: false

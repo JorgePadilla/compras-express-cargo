@@ -749,6 +749,12 @@ class Paquete < ApplicationRecord
   # controller) para que el flow desde manifiestos#add_paquete también
   # sincronice las fechas al añadir un paquete a un manifiesto ya enviado.
   before_save :sync_dates_from_manifiesto, if: :manifiesto_id_changed?
+  # C33-03 · Si el paquete deja de haber salido (retroceso, o se saca del
+  # manifiesto antes de viajar), se olvida que se le avisó: cuando vuelva a
+  # salir, el resumen de las 6 pm lo cuenta otra vez. Va después de
+  # `sync_dates_from_manifiesto`, que es uno de los que borra la fecha.
+  before_save -> { self.envio_notificado_at = nil },
+              if: -> { will_save_change_to_fecha_enviado? && fecha_enviado.nil? }
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
@@ -1015,17 +1021,36 @@ class Paquete < ApplicationRecord
     GrupoDeUnion.de(self)
   end
 
-  # C26-03 · El gancho para la pre-factura, que **todavía no lo lee** (es su
-  # bloque, `C26-08`): medido, y sin grupo, o con el grupo completo, cerrado
-  # (se factura aparte) o con la excepción de «facturar lo que hay» sellada.
+  # C34 · Lista 11 · El número de la pre-alerta **consolidada** del paquete,
+  # para la etiqueta de Miami. El de muestra del editor lo trae puesto
+  # (`EtiquetaPlantilla.paquete_de_muestra`): sin persistir no hay qué buscar.
+  attr_writer :pre_alerta_en_etiqueta
+
+  def pre_alerta_en_etiqueta
+    return @pre_alerta_en_etiqueta if defined?(@pre_alerta_en_etiqueta)
+
+    @pre_alerta_en_etiqueta = (GrupoDeUnion.pre_alerta_consolidada_de(self)&.numero_documento if persisted?)
+  end
+
+  # C26-03 · Medido, y sin grupo, o con el grupo completo, cerrado (se
+  # factura aparte) o con la excepción de «facturar lo que hay» sellada.
   #
   # «Grupo» incluye el split: media caja de un tracking partido no se factura
   # sin la otra mitad medida.
   def listo_para_prefactura?
-    return false if medido_at.blank?
+    medido_at.present? && grupo_pendiente.nil?
+  end
 
+  # C34-07 · El grupo al que todavía le falta carga, o nil. Ya no es un
+  # bloqueo: Yusef, viendo el «grupo que todavía no está completo» en la
+  # pasada del 2026-10-30, *"aquí no debería ser bloqueado… porque estamos
+  # empezando a hacerle el consolidado"*. F8 arranca el consolidado con lo que
+  # hay, y F9 **pregunta** antes de avisar (`GuardarPreFacturaAuditada`).
+  def grupo_pendiente
     grupo = grupo_de_union
-    grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+    return nil if grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+
+    grupo
   end
 
   def numero_recepcion_visible

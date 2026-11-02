@@ -285,6 +285,27 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     assert_equal "en_aduana", suelto.reload.estado, "y el suelto"
   end
 
+  # C34-03 · *"Yo solo mandé uno, se quedó el dos, después le dije: meter todo
+  # lo que estaba… lo recibí en Honduras, no les cambió los datos."* Un envío
+  # partido en dos: la caja 1 se escaneó a una caja del manifiesto, la 2 entró
+  # con «empacar sin escanear», sin caja. Recibir la caja de la 1 trae a la 2.
+  test "C34-03 · la otra caja del mismo warehouse, que viajó sin caja, se recibe con su hermana" do
+    manifiesto = manifiestos(:enviado)
+    caja = manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
+    uno = crear_paquete_suelto(manifiesto)
+    uno.update!(caja_manifiesto: caja, numero_caja: 1, cantidad_paquetes: 2)
+    dos = Paquete.create!(tracking: uno.tracking, cliente: uno.cliente, tipo_envio: uno.tipo_envio,
+                          sucursal_recepcion: sucursales(:miami), estado: "enviado_honduras", manifiesto: manifiesto,
+                          numero_recepcion: uno.numero_recepcion, numero_caja: 2, cantidad_paquetes: 2)
+    ajeno = crear_paquete_suelto(manifiesto)
+
+    post escanear_recepcion_carga_url(manifiesto), params: { codigo: caja.codigo }, as: :json
+
+    assert_equal "en_aduana", uno.reload.estado
+    assert_equal "en_aduana", dos.reload.estado, "la hermana sin caja llegó con la caja"
+    assert_equal "enviado_honduras", ajeno.reload.estado, "lo suelto de otro envío sigue esperando «Terminar»"
+  end
+
   private
 
   def crear_paquete_suelto(manifiesto)

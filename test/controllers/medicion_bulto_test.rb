@@ -198,7 +198,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal pa.numero_documento, json["pre_alerta"]
     assert json["puede_remedir"]
     assert_equal medida.reload.numero_recepcion, json["remedir_codigo"]
-    assert_match(/Traelas del estante/, json["mensaje"])
+    assert_match(/Traelos del estante/, json["mensaje"])
 
     # «Medirla sola» la deja entrar.
     escanear_aparte(@primera.tracking)
@@ -222,6 +222,35 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal "consolidado_ya_medido", json["resultado"]
     assert_not json["puede_remedir"]
     assert_match(/pre-factura/, json["mensaje"])
+  end
+
+  # C34-05 · `RP-111` · Después de F8 sí: la consolidando se anula al guardar,
+  # y lo nuevo reemplaza a lo viejo en un solo volumen.
+  test "C34-05 · lo medido que F8 dejó consolidando se mide de nuevo todo junto" do
+    medida = caja("1ZBULTO000000021")
+    pa = pre_alerta_consolidada(medida)
+    guardar([ medida ], [ { peso: "10" } ])
+    vieja = medida.reload.medicion_sesion
+    f8 = PreFactura.create!(cliente: clientes(:juan), consolidando_at: Time.current, fecha_trabajo: Date.current)
+    f8.pre_factura_items.create!(bulto: Bulto.find_by!(sesion: vieja), paquete: medida, concepto: "Volumen",
+                                 subtotal: 10, origen: "volumen")
+    medida.update_columns(pre_factura_id: f8.id, estado: "consolidando_honduras")
+    pa.pre_alerta_paquetes.create!(tracking: @primera.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @primera)
+
+    escanear(@primera.tracking)
+    assert_equal "consolidado_ya_medido", json["resultado"]
+    assert json["puede_remedir"], json["mensaje"]
+
+    post escanear_medicion_index_path, params: { codigo: json["remedir_codigo"], remedir: true }, as: :json
+    assert_equal [ vieja ], json["remedir_tanda"]["sesiones"]
+    assert_equal [ medida.id ], json["hermanas"].map { |h| h["id"] }
+
+    post guardar_medicion_index_path, as: :json,
+         params: { paquete_ids: [ medida.id, @primera.id ], volumenes: [ { peso: "14" } ], reemplaza_sesiones: [ vieja ] }
+    assert_response :success, response.body
+    assert f8.reload.anulado?
+    assert_equal 1, Bulto.where(sesion: medida.reload.medicion_sesion).count
+    assert_equal medida.medicion_sesion, @primera.reload.medicion_sesion
   end
 
   test "el modal del consolidado dice también a qué pre-factura pertenece, si ya tiene una" do
@@ -271,7 +300,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal 2, Bulto.count
     assert_equal [ "1 de 2", "2 de 2" ], json["bultos"].map { |b| b["de_cuantos_texto"] }
     assert_equal 1, Bulto.pluck(:sesion).uniq.size, "las dos salieron de la misma tanda"
-    assert_match(/2 volúmenes guardados de 2 cajas/, json["mensaje"])
+    assert_match(/2 volúmenes guardados de 2 paquetes/, json["mensaje"])
 
     get json["imprimir_url"]
     assert_response :success
@@ -347,7 +376,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal etiquetas_sesion_medicion_path(sesion, print: "true"), json["tanda"]["etiquetas_url"]
     assert_equal 2, json["tanda"]["cajas"]
     assert_equal 2, json["tanda"]["volumenes"].size
-    assert_match(/tanda de 2 cajas y 2 volúmenes/, json["mensaje"])
+    assert_match(/tanda de 2 paquetes y 2 volúmenes/, json["mensaje"])
 
     get json["tanda"]["etiquetas_url"]
     assert_response :success
@@ -364,7 +393,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_match "20.00", response.body
     assert_match "10x12x14", response.body
     assert_no_match(/3\.00/, response.body)
-    assert_match "1 caja", response.body
+    assert_match "1 paquete", response.body
     assert_match "MD", response.body
   end
 
@@ -523,7 +552,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal [ 6.0, 3.0 ], json["remedir_tanda"]["volumenes"].map { |v| v["peso"] }
     assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_tanda"]["volumenes"].first.values_at("alto", "largo", "ancho")
     assert_equal [ @primera.id, otra.id ].sort, json["hermanas"].map { |h| h["id"] }.sort, "vuelven las dos, no solo la escaneada"
-    assert_match(/Midiendo de nuevo: 2 cajas y 2 volúmenes/, json["mensaje"])
+    assert_match(/Midiendo de nuevo: 2 paquetes y 2 volúmenes/, json["mensaje"])
   end
 
   test "sin «medir de nuevo», la caja ya medida sigue rebotando" do

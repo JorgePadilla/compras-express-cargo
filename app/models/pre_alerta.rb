@@ -184,6 +184,22 @@ class PreAlerta < ApplicationRecord
     end
   end
 
+  # C33-02 · El correo de confirmación. El **primero** que sale de una
+  # pre-alerta es el de creación, y ése lleva copia a SAC. Yusef, 2026-10-24:
+  # *"crear la prealerta, que te mande al cliente… y nosotros lo
+  # supervisamos… y una copia"*. Los que salen después, cuando el cliente
+  # mueve, agrega o borra un paquete, van solo al cliente; si no, SAC recibe un
+  # correo por cada movimiento.
+  #
+  # «El primero» es `notificado`. No se mira cuál pantalla la creó: el
+  # cliente que eligió «agregar otro» en el wizard no recibía la confirmación
+  # al crearla, y su primer correo es el que sale después.
+  def enviar_confirmacion
+    primera = !notificado?
+    update_column(:notificado, true) if primera
+    PreAlertaMailer.confirmacion(self, copia_a_sac: primera).deliver_later
+  end
+
   def append_historial!(entry)
     current = historial.to_s
     new_historial = current.present? ? "#{current}\n#{entry}" : entry

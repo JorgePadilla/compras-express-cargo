@@ -75,6 +75,26 @@
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
         Enter lo agrega directo. Si lo que escribiste devuelve varios, salen abajo para elegir.
       </p>
+      <%# C34-02 · Junto al escaneo, que es la otra manera de meter carga. Yusef:
+          *"yo creo que debería de agregarlo acá abajo, donde está el
+          escaneado"*. Estaba arriba, en el encabezado de las cajas. Este
+          parcial se repinta con cada escaneo, así que el número del botón
+          baja a medida que se escanea. %>
+      <% sin_escanear = EmpacarSinEscanear.new(manifiesto) %>
+      <% if sin_escanear.aplica? %>
+        <% candidatos = sin_escanear.candidatos.count %>
+        <div class="mt-3 flex flex-wrap items-center gap-3" data-empacar-sin-escanear>
+          <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",
+                href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
+                disabled: candidatos.zero?, class: "whitespace-nowrap",
+                confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
+                         "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} que están en " \
+                         "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
+            Empacar sin escanear<%= " (#{candidatos})" if candidatos.positive? %>
+          <% end %>
+          <span class="text-xs text-gray-500 dark:text-gray-400">Los que no da tiempo de escanear: entran sin caja.</span>
+        </div>
+      <% end %>
       <div data-manifiesto-search-target="aviso" data-controller="anuncia-cambios" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
       <div data-manifiesto-search-target="results" class="mt-3 hidden"></div>
     </div>

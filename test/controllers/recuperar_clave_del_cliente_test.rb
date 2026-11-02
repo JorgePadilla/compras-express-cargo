@@ -28,6 +28,12 @@ class RecuperarClaveDelClienteTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "y con el codigo en minuscula, igual (C33-06)" do
+    assert_enqueued_emails 1 do
+      post passwords_path, params: { email_address: @cliente.codigo.downcase }
+    end
+  end
+
   test "el empleado sigue funcionando igual" do
     assert_enqueued_emails 1 do
       post passwords_path, params: { email_address: users(:admin).email_address }

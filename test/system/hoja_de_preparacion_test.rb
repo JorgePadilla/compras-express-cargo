@@ -23,14 +23,16 @@ class HojaDePreparacionSystemTest < ApplicationSystemTestCase
     assert_text "Elegí arriba los servicios"
 
     # 1 · El servicio.
+    # PR-P.12 · Tildarlo ya trae sus manifiestos: no hay «Ver manifiestos».
     find("label", text: @cer.nombre, exact_text: true).click
-    click_on "Ver manifiestos"
+    assert_no_button "Ver manifiestos"
 
     # 2 · El manifiesto.
-    within("[data-manifiesto='#{@manifiesto.numero}']") do
+    within("[data-manifiesto='#{@manifiesto.numero}']", wait: 5) do
       assert_text "0 de 1 paquetes pre-facturados"
       find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).check
     end
+    assert_selector "#hoja_manifiesto_#{@manifiesto.id}[checked]", visible: :all, wait: 5
 
     # 3 · La hora: 07:30 por defecto, y se cambia sin segundos.
     assert_equal "07:30", find("#hoja_hora", visible: :all).value
@@ -59,7 +61,6 @@ class HojaDePreparacionSystemTest < ApplicationSystemTestCase
     page.driver.browser.manage.window.resize_to(1400, 600)
     visit hoja_de_preparacion_path
     find("label", text: @cer.nombre, exact_text: true).click
-    click_on "Ver manifiestos"
     assert_selector "[data-manifiesto='#{@manifiesto.numero}']", wait: 5
     # El que scrollea en este layout es el `<main>`, no la ventana.
     assert_operator page.evaluate_script("document.querySelector('main').scrollHeight - document.querySelector('main').clientHeight"), :>, 200,

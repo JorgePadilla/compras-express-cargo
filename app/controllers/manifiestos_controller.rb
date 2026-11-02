@@ -248,7 +248,10 @@ class ManifiestosController < ApplicationController
 
     aviso = "Entraron #{resultado.agregados} paquete(s), empacados sin escanear."
     if resultado.trabados.any?
-      aviso += " #{resultado.trabados.size} tiene(n) tareas pendientes y no avanzan hasta cerrarlas: " \
+      # C33-09 · En el interno el paquete no tiene a dónde avanzar al entrar: lo
+      # que traba es que el manifiesto no sale (`FinalizarManifiesto`).
+      consecuencia = @manifiesto.tipo_interno? ? "el manifiesto no se finaliza" : "no avanzan"
+      aviso += " #{resultado.trabados.size} tiene(n) tareas pendientes y #{consecuencia} hasta cerrarlas: " \
                "#{resultado.trabados.map { |p| p.numero_recepcion_visible.presence || p.tracking }.to_sentence}."
     end
     redirect_to manifiesto_path(@manifiesto), notice: aviso

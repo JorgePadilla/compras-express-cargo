@@ -40,12 +40,16 @@ class TeclasPorFamiliaTest < ActiveSupport::TestCase
     "F6"  => /editar|modificar/i,
     "F8"  => /guardar|finalizar|confirmar|aplicar/i,
     "F9"  => /imprimir|pdf/i,
+    # C34 · Lista 10 · Yusef: *"buen punto, que creemos F10"* — guardar e
+    # imprimir la orden y la etiqueta juntas, para la carga que va a otra
+    # sucursal (*"como comprobación de qué es lo que va"*).
+    "F10" => /orden/i,
     "F11" => /finalizar|cerrar/i
   }.freeze
 
   # Las que la hoja dejó libres. Que nada las vuelva a tomar sin decidirlo:
   # un botón nuevo copiado de una pantalla vieja traería «(F10)» de regalo.
-  LIBRES = %w[F7 F10].freeze
+  LIBRES = %w[F7].freeze
 
   test "ninguna tecla significa dos cosas distintas" do
     fuera = []

@@ -220,6 +220,21 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
     assert_match(/Empacar sin escanear \(1\)/, response.body)
   end
 
+  # C34-02 · *"Yo creo que debería de agregarlo acá abajo, donde está el
+  # escaneado."* Va adentro de lo que se repinta con cada escaneo, debajo de
+  # la pistola, y una sola vez.
+  test "el botón está junto al escaneo, una sola vez" do
+    paquete_candidato(tracking: "1ZJUNTOALESC1")
+
+    get manifiesto_path(@manifiesto)
+
+    assert_select "#manifiesto-contenido [data-empacar-sin-escanear] form[action=?]",
+                  empacar_sin_escanear_manifiesto_path(@manifiesto)
+    assert_select "form[action=?]", empacar_sin_escanear_manifiesto_path(@manifiesto), count: 1
+    assert_operator response.body.index('id="buscar_paquete"'), :<, response.body.index("data-empacar-sin-escanear"),
+                    "va debajo de la pistola"
+  end
+
   test "sin candidatos el botón queda deshabilitado" do
     get manifiesto_path(@manifiesto)
 

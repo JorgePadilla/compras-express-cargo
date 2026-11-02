@@ -281,13 +281,16 @@ class User < ApplicationRecord
   # 2026-08-01) → orden por departamento: Miami → Caja → Pre-Factura → SAC
   # → Entrega. Pre-Factura y Entrega no tienen columna propia: ambas leen
   # `notas_honduras`, así que el orden efectivo colapsa a estos cuatro.
-  NOTAS_DEPARTAMENTO_ORDEN = %i[notas_miami notas_caja notas_honduras notas_sac].freeze
+  #
+  # C34-10 · Medición tiene la suya desde el 2026-10-31, después de las de
+  # Honduras: la PESA va entre recibir carga y pre-factura.
+  NOTAS_DEPARTAMENTO_ORDEN = %i[notas_miami notas_caja notas_honduras notas_medicion notas_sac].freeze
 
   # PR-D2.b, ahora como tabla y no como `case`: con varios roles hay que poder
   # recorrerla rol por rol y unir, que un `case` sobre una sola variable no deja.
   NOTAS_POR_ROL = {
     "admin"                 => [ %i[notas_miami Miami], %i[notas_honduras Honduras],
-                                 %i[notas_caja Caja], %i[notas_sac SAC] ],
+                                 %i[notas_medicion Medición], %i[notas_caja Caja], %i[notas_sac SAC] ],
     "supervisor_miami"      => [ %i[notas_miami Miami] ],
     "digitador_miami"       => [ %i[notas_miami Miami] ],
     "supervisor_caja"       => [ %i[notas_caja Caja], %i[notas_honduras Honduras] ],
@@ -296,7 +299,9 @@ class User < ApplicationRecord
     "sac"                   => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
     "supervisor_sac"        => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
     "entrega_despacho"      => [ %i[notas_honduras Honduras] ],
-    "medicion"              => [ %i[notas_honduras Honduras] ]
+    # C34-10 · La suya, **además** de las de pre-factura: C29-19 dijo *"de
+    # momento no las deberíamos de separar"*, y eso sigue.
+    "medicion"              => [ %i[notas_honduras Honduras], %i[notas_medicion Medición] ]
   }.freeze
 
   # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario

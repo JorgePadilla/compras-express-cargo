@@ -59,7 +59,12 @@
       <%= number_field_tag :dias_entrega, te.dias_entrega, id: "dias_entrega_#{te.id}", min: 1, step: 1,
             class: "w-20 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm py-1 focus:ring-cec-teal focus:border-cec-teal" %>
       <span>días hábiles</span>
-      <%= render(ButtonComponent.new(variant: :secondary, size: :sm, type: :submit, label: "Guardar días de #{te.nombre}")) { "Guardar" } %>
+      <%# C33-05 · La «Línea 2» del casillero en Miami para este servicio: la
+          que ve el cliente en «Mis Direcciones» y en los correos del casillero. %>
+      <%= label_tag "linea_2_casillero_#{te.id}", "Línea 2 del casillero", class: "ml-4" %>
+      <%= text_field_tag :linea_2_casillero, te.linea_2_casillero, id: "linea_2_casillero_#{te.id}", maxlength: 60,
+            class: "w-48 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm py-1 uppercase focus:ring-cec-teal focus:border-cec-teal" %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :sm, type: :submit, label: "Guardar días y línea 2 de #{te.nombre}")) { "Guardar" } %>
       <% if te.dias_entrega.blank? %>
         <span class="text-xs text-gray-500 dark:text-gray-400">Sin días, el correo de recibido no da fecha.</span>
       <% end %>
